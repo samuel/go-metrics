@@ -1,6 +1,7 @@
 package metrics
 
 import (
+    "fmt"
     "math"
     "sort"
 )
@@ -50,6 +51,11 @@ func NewBiasedHistogram() *Histogram {
 */
 func NewUnbiasedHistogram() *Histogram {
     return NewHistogram(NewUniformSample(1028))
+}
+
+func (self *Histogram) String() string {
+    return fmt.Sprintf("Histogram{sum:%.4f count:%d min:%.4f max:%.4f}",
+        self.sum, self.count, self.min, self.max)
 }
 
 func (self *Histogram) Clear() {

@@ -20,6 +20,7 @@ alpha the exponential decay factor; the higher this is, the more
 */
 
 import (
+    "fmt"
     "math"
     "rand"
     "time"
@@ -39,6 +40,10 @@ type PriorityValue struct {
 
 type Reservoir struct {
     samples []PriorityValue
+}
+
+func (self *Reservoir) String() string {
+    return fmt.Sprintf("%s", self.GetValues())
 }
 
 func (self *Reservoir) Clear() {
