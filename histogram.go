@@ -39,7 +39,7 @@ func NewHistogram(sample Sample) *Histogram {
   distribution, and an alpha factor of 0.015, which heavily biases
   the sample to the past 5 minutes of measurements.
 */
-func NewBiasedHistogram(reservoir_size int) *Histogram {
+func NewBiasedHistogram() *Histogram {
     return NewHistogram(NewExponentiallyDecayingSample(1028, 0.015))
 }
 
@@ -48,7 +48,7 @@ func NewBiasedHistogram(reservoir_size int) *Histogram {
   confidence level with a 5% margin of error assuming a normal
   distribution.
 */
-func NewUnbiasedHistogram(reservoir_size int) *Histogram {
+func NewUnbiasedHistogram() *Histogram {
     return NewHistogram(NewUniformSample(1028))
 }
 
