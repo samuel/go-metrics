@@ -8,6 +8,8 @@ import (
     "log"
     "os"
     "net"
+    "strconv"
+    "strings"
     "sync"
     "time"
 
@@ -23,13 +25,14 @@ var (
     f_laddr    = flag.String("l", "0.0.0.0:5252", "the address to listen on")
     f_username = flag.String("u", "", "librato metrics username")
     f_token    = flag.String("t", "", "librato metrics token")
+    f_perc     = flag.String("p", "0.90,0.95,0.99,0.999", "comma separated list of percentiles to record")
 )
 
 var (
     mu          sync.Mutex
     counters    = make(map[string]float64)
     histograms  = make(map[string]*metrics.Histogram)
-    percentiles = []float64{0.90, 0.95, 0.99, 0.999}
+    percentiles = []float64{}
 )
 
 func main() {
@@ -45,6 +48,16 @@ func parseFlags() {
     }
     if *f_token == "" {
         log.Fatal("token is required (-t)")
+    }
+    for _, s := range strings.Split(*f_perc, ",") {
+        p, err := strconv.Atof64(s)
+        if err != nil {
+            log.Fatal("Couldn't parse percentile flag: " + err.String())
+        }
+        if p < 0 || p > 1 {
+            log.Fatalf("Invalid percentile: %f", p)
+        }
+        percentiles = append(percentiles, p)
     }
 }
 
