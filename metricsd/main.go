@@ -23,9 +23,9 @@ const (
 
 var (
     f_laddr    = flag.String("l", "0.0.0.0:5252", "the address to listen on")
+    f_perc     = flag.String("p", "0.90,0.95,0.99,0.999", "comma separated list of percentiles to record")
     f_username = flag.String("u", "", "librato metrics username")
     f_token    = flag.String("t", "", "librato metrics token")
-    f_perc     = flag.String("p", "0.90,0.95,0.99,0.999", "comma separated list of percentiles to record")
 )
 
 var (
