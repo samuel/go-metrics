@@ -3,3 +3,5 @@ _test
 *.6
 6.out
 _testmain.go
+metricsd
+bin/
