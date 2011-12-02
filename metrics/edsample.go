@@ -1,23 +1,14 @@
+// An exponentially-decaying random sample of {@code long}s. Uses Cormode et
+// al's forward-decaying priority reservoir sampling method to produce a
+// statistically representative sample, exponentially biased towards newer
+// entries.
+// 
+// http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf
+// Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
+// Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
+// Data Engineering (2009)
+
 package metrics
-
-/*
-An exponentially-decaying random sample of {@code long}s. Uses Cormode et
-al's forward-decaying priority reservoir sampling method to produce a
-statistically representative sample, exponentially biased towards newer
-entries.
-
-http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf
-Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
-Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
-Data Engineering (2009)
-
-
-reservoirSize the number of samples to keep in the sampling reservoir
-
-alpha the exponential decay factor; the higher this is, the more
-      biased the sample will be towards newer values
-
-*/
 
 import (
     "fmt"
@@ -28,7 +19,7 @@ import (
 )
 
 const (
-    RESCALE_THRESHOLD = 60 * 60 * 1000000 // nanoseconds
+    RESCALE_THRESHOLD = 360e9 // nanoseconds
 )
 
 // Reservoir
@@ -95,7 +86,10 @@ func (self *Reservoir) Pop() interface{} {
 // ExponentiallyDecayingSample
 
 type ExponentiallyDecayingSample struct {
+    // the number of samples to keep in the sampling reservoir
     reservoir_size  int
+    // the exponential decay factor; the higher this is, the more
+    // biased the sample will be towards newer values
     alpha           float64
     values          *Reservoir
     count           int
