@@ -16,7 +16,7 @@ import (
 )
 
 const (
-    REPORT_INTERVAL = 5000000000 //60000000000 // 60 seconds
+    REPORT_INTERVAL = 60e9 // nanoseconds
 )
 
 var (
@@ -62,7 +62,7 @@ func packetLoop(l net.PacketConn) {
     for {
         n, _, err := l.ReadFrom(buf)
         if err != nil {
-            log.Println(err)
+            log.Println(err.String())
         }
         if n > 9 {
             mtype := buf[0]
