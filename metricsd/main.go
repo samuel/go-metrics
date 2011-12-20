@@ -14,6 +14,7 @@ import (
 
 	"librato"
 	"metrics"
+	"stathat"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 
 var (
 	f_laddr    = flag.String("l", "0.0.0.0:5252", "the address to listen on")
-	f_perc     = flag.String("p", "0.90,0.95,0.99,0.999", "comma separated list of percentiles to record")
+	f_perc     = flag.String("p", "0.90,0.99,0.999", "comma separated list of percentiles to record")
 	f_username = flag.String("u", "", "librato metrics username")
 	f_token    = flag.String("t", "", "librato metrics token")
 	f_stathat  = flag.String("s", "", "StatHat email")
@@ -43,11 +44,8 @@ func main() {
 
 func parseFlags() {
 	flag.Parse()
-	if *f_username == "" {
-		log.Fatal("username is required (-u)")
-	}
-	if *f_token == "" {
-		log.Fatal("token is required (-t)")
+	if *f_stathat == "" && (*f_username == "" || *f_token == "") {
+		log.Fatal("Either StatHat email or Librato username & token required")
 	}
 	for _, s := range strings.Split(*f_perc, ",") {
 		p, err := strconv.ParseFloat(s, 64)
@@ -110,15 +108,27 @@ func updateHistogram(name string, value float64) {
 }
 
 func reporter() {
-	met := librato.Metrics{*f_username, *f_token}
+	var met *librato.Metrics = nil
+	if *f_username != "" && *f_token != "" {
+		met = &librato.Metrics{*f_username, *f_token}
+	}
 	tc := time.Tick(REPORT_INTERVAL)
 	for {
 		ts := <-tc
 		counters, histograms := swapMetrics()
 
-		err := sendMetrics(met, ts, counters, histograms)
-		if err != nil {
-			log.Printf(err.Error())
+		if len(counters) > 0 || len(histograms) > 0 {
+			if met != nil {
+				if err := sendMetricsLibrato(met, ts, counters, histograms); err != nil {
+					log.Printf(err.Error())
+				}
+			}
+
+			if *f_stathat != "" {
+				if err := sendMetricsStatHat(ts, counters, histograms); err != nil {
+					log.Printf(err.Error())
+				}
+			}
 		}
 	}
 }
@@ -136,11 +146,7 @@ func swapMetrics() (oldcounters map[string]float64, oldhistograms map[string]*me
 	return
 }
 
-func sendMetrics(met librato.Metrics, ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
-	if len(counters) == 0 && len(histograms) == 0 {
-		return nil
-	}
-
+func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
 	metrics := librato.MetricsFormat{}
 	for name, value := range counters {
 		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: value})
@@ -154,4 +160,23 @@ func sendMetrics(met librato.Metrics, ts time.Time, counters map[string]float64,
 	}
 
 	return met.SendMetrics(&metrics)
+}
+
+func sendMetricsStatHat(ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+	for name, value := range counters {
+		if err := stathat.PostEZCount(name, *f_stathat, int(value)); err != nil {
+			return err
+		}
+	}
+	for name, hist := range histograms {
+		if err := stathat.PostEZValue(name, *f_stathat, hist.GetMean()); err != nil {
+			return err
+		}
+		for i, p := range hist.GetPercentiles(percentiles) {
+			if err := stathat.PostEZValue(fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), *f_stathat, p); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
