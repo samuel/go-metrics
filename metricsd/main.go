@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"librato"
-	"metrics"
-	"stathat"
+	"github.com/samuel/go-librato"
+	"github.com/samuel/go-metrics/metrics"
+	"github.com/samuel/stathatgo"
 )
 
 const (
