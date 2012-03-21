@@ -115,8 +115,8 @@ func AddSnapshotReceiver(name string, receiver MetricsReceiver) {
 	recvs, ok := receivers[name]
 	if  !ok {
 		recvs = make([]MetricsReceiver,0)
-		receivers[name] = recvs
 	}
 	recvs = append(recvs, receiver)
+	receivers[name] = recvs
 	recvMu.Unlock()
 }
