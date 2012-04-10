@@ -31,14 +31,14 @@ var (
 
 var (
 	mu          sync.Mutex
-	counters    = make(map[string]float64)
-	histograms  = make(map[string]*metrics.Histogram)
 	percentiles = []float64{}
+	met         *librato.Metrics
 )
 
 func main() {
 	parseFlags()
-	go reporter()
+	metrics.AddSnapshotReceiver("60sec", reporter)
+	go metrics.RunMetricsHeartbeat("60sec", 0,REPORT_INTERVAL * time.Nanosecond)
 	packetLoop(listen())
 }
 
@@ -56,6 +56,9 @@ func parseFlags() {
 			log.Fatalf("Invalid percentile: %f", p)
 		}
 		percentiles = append(percentiles, p)
+	}
+	if *f_username != "" && *f_token != "" {
+		met = &librato.Metrics{*f_username, *f_token}
 	}
 }
 
@@ -82,71 +85,32 @@ func packetLoop(l net.PacketConn) {
 			name := string(buf[9:n])
 
 			if mtype == 'c' {
-				updateCounter(name, value)
+				metrics.UpdateCounterf(name, value)
 			} else if mtype == 't' {
-				updateHistogram(name, value)
+				metrics.UpdateHistogram(name, value)
 			}
 		}
 	}
 }
 
-func updateCounter(name string, value float64) {
-	mu.Lock()
-	defer mu.Unlock()
-	counters[name] += value
-}
-
-func updateHistogram(name string, value float64) {
-	mu.Lock()
-	defer mu.Unlock()
-	hist := histograms[name]
-	if hist == nil {
-		hist = metrics.NewUnbiasedHistogram()
-		histograms[name] = hist
-	}
-	hist.Update(value)
-}
-
-func reporter() {
-	var met *librato.Metrics = nil
-	if *f_username != "" && *f_token != "" {
-		met = &librato.Metrics{*f_username, *f_token}
-	}
-	tc := time.Tick(REPORT_INTERVAL)
-	for {
-		ts := <-tc
-		counters, histograms := swapMetrics()
-
-		if len(counters) > 0 || len(histograms) > 0 {
-			if met != nil {
-				if err := sendMetricsLibrato(met, ts, counters, histograms); err != nil {
-					log.Printf(err.Error())
-				}
+func reporter(name string, snap metrics.Snapshot) {
+	if len(snap.Counterfs) > 0 || len(snap.Histograms) > 0 {
+		if met != nil {
+			if err := sendMetricsLibrato(met, snap.Counterfs, snap.Histograms); err != nil {
+				log.Printf(err.Error())
 			}
+		}
 
-			if *f_stathat != "" {
-				if err := sendMetricsStatHat(ts, counters, histograms); err != nil {
-					log.Printf(err.Error())
-				}
+		if *f_stathat != "" {
+			if err := sendMetricsStatHat(snap.Counterfs, snap.Histograms); err != nil {
+				log.Printf(err.Error())
 			}
 		}
 	}
 }
 
-func swapMetrics() (oldcounters map[string]float64, oldhistograms map[string]*metrics.Histogram) {
-	mu.Lock()
-	defer mu.Unlock()
 
-	oldcounters = counters
-	oldhistograms = histograms
-
-	counters = make(map[string]float64)
-	histograms = make(map[string]*metrics.Histogram)
-
-	return
-}
-
-func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+func sendMetricsLibrato(met *librato.Metrics, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
 	metrics := librato.MetricsFormat{}
 	for name, value := range counters {
 		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: value})
@@ -162,7 +126,7 @@ func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]
 	return met.SendMetrics(&metrics)
 }
 
-func sendMetricsStatHat(ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+func sendMetricsStatHat(counters map[string]float64, histograms map[string]*metrics.Histogram) error {
 	for name, value := range counters {
 		if err := stathat.PostEZCount(name, *f_stathat, int(value)); err != nil {
 			return err
