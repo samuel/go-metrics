@@ -10,13 +10,13 @@ import (
 )
 
 type UniformSample struct {
-	reservoir_size int
-	values         []float64
-	count          int
+	reservoirSize int
+	values        []float64
+	count         int
 }
 
-func NewUniformSample(reservoir_size int) *UniformSample {
-	return &UniformSample{reservoir_size, make([]float64, reservoir_size), 0}
+func NewUniformSample(reservoirSize int) *UniformSample {
+	return &UniformSample{reservoirSize, make([]float64, reservoirSize), 0}
 }
 
 func (self *UniformSample) Clear() {
@@ -24,24 +24,24 @@ func (self *UniformSample) Clear() {
 }
 
 func (self *UniformSample) Len() int {
-	if self.count < self.reservoir_size {
+	if self.count < self.reservoirSize {
 		return self.count
 	}
-	return self.reservoir_size
+	return self.reservoirSize
 }
 
 func (self *UniformSample) Update(value float64) {
 	self.count += 1
-	if self.count <= self.reservoir_size {
+	if self.count <= self.reservoirSize {
 		self.values[self.count-1] = value
 	} else {
 		r := int(rand.Float64() * float64(self.count))
-		if r < self.reservoir_size {
+		if r < self.reservoirSize {
 			self.values[r] = value
 		}
 	}
 }
 
 func (self *UniformSample) Values() []float64 {
-	return self.values[:minInt(self.count, self.reservoir_size)]
+	return self.values[:minInt(self.count, self.reservoirSize)]
 }

@@ -84,21 +84,21 @@ func (self *Reservoir) Pop() interface{} {
 // Data Engineering (2009)
 type ExponentiallyDecayingSample struct {
 	// the number of samples to keep in the sampling reservoir
-	reservoir_size int
+	reservoirSize int
 	// the exponential decay factor; the higher this is, the more
 	// biased the sample will be towards newer values
-	alpha           float64
-	values          *Reservoir
-	count           int
-	start_time      time.Time
-	next_scale_time time.Time
+	alpha         float64
+	values        *Reservoir
+	count         int
+	startTime     time.Time
+	nextScaleTime time.Time
 }
 
-func NewExponentiallyDecayingSample(reservoir_size int, alpha float64) *ExponentiallyDecayingSample {
+func NewExponentiallyDecayingSample(reservoirSize int, alpha float64) *ExponentiallyDecayingSample {
 	eds := ExponentiallyDecayingSample{
-		reservoir_size: reservoir_size,
-		alpha:          alpha,
-		values:         &Reservoir{}}
+		reservoirSize: reservoirSize,
+		alpha:         alpha,
+		values:        &Reservoir{}}
 	eds.Clear()
 	return &eds
 }
@@ -107,8 +107,8 @@ func (self *ExponentiallyDecayingSample) Clear() {
 	self.values.Clear()
 	heap.Init(self.values)
 	self.count = 0
-	self.start_time = time.Now()
-	self.next_scale_time = self.start_time.Add(RESCALE_THRESHOLD)
+	self.startTime = time.Now()
+	self.nextScaleTime = self.startTime.Add(RESCALE_THRESHOLD)
 }
 
 func (self *ExponentiallyDecayingSample) Len() int {
@@ -125,9 +125,9 @@ func (self *ExponentiallyDecayingSample) Values() []float64 {
 
 func (self *ExponentiallyDecayingSample) Update(value float64) {
 	timestamp := time.Now()
-	priority := self.weight(timestamp.Sub(self.start_time)) / rand.Float64()
+	priority := self.weight(timestamp.Sub(self.startTime)) / rand.Float64()
 	self.count += 1
-	if self.count <= self.reservoir_size {
+	if self.count <= self.reservoirSize {
 		heap.Push(self.values, PriorityValue{priority, value})
 	} else {
 		if first := self.values.Get(0); first.priority > priority {
@@ -137,7 +137,7 @@ func (self *ExponentiallyDecayingSample) Update(value float64) {
 		}
 	}
 
-	if timestamp.After(self.next_scale_time) {
+	if timestamp.After(self.nextScaleTime) {
 		self.rescale(timestamp)
 	}
 }
@@ -166,9 +166,9 @@ landmark L′ (and then use this new L′ at query time). This can be done with
 a linear pass over whatever data structure is being used.
 */
 func (self *ExponentiallyDecayingSample) rescale(now time.Time) {
-	self.next_scale_time = now.Add(RESCALE_THRESHOLD)
-	old_start_time := self.start_time
-	self.start_time = now
-	scale := math.Exp(-self.alpha * float64(self.start_time.Sub(old_start_time)))
+	self.nextScaleTime = now.Add(RESCALE_THRESHOLD)
+	oldStartTime := self.startTime
+	self.startTime = now
+	scale := math.Exp(-self.alpha * float64(self.startTime.Sub(oldStartTime)))
 	self.values.ScalePriority(scale)
 }

@@ -5,9 +5,9 @@ import (
 )
 
 type testEDSampleStruct struct {
-	reservoir_size  int
-	population_size int
-	alpha           float64
+	reservoirSize  int
+	populationSize int
+	alpha          float64
 }
 
 var testEDData = []testEDSampleStruct{
@@ -18,21 +18,21 @@ var testEDData = []testEDSampleStruct{
 
 func TestEDSampleSizes(t *testing.T) {
 	for _, data := range testEDData {
-		sample := NewExponentiallyDecayingSample(data.reservoir_size, data.alpha)
+		sample := NewExponentiallyDecayingSample(data.reservoirSize, data.alpha)
 		if sample.Len() != 0 {
 			t.Errorf("Size of sample should be 0 but is %d", sample.Len())
 		}
-		for i := 0; i < data.population_size; i++ {
+		for i := 0; i < data.populationSize; i++ {
 			sample.Update(float64(i))
 		}
-		expected_size := minInt(data.reservoir_size, data.population_size)
+		expected_size := minInt(data.reservoirSize, data.populationSize)
 		if sample.Len() != expected_size {
-			t.Errorf("Size of sample should be %d but is %d", data.reservoir_size, sample.Len())
+			t.Errorf("Size of sample should be %d but is %d", data.reservoirSize, sample.Len())
 		}
 		// Should only have elements from the population
 		values := sample.Values()
 		for i := 0; i < len(values); i++ {
-			if values[i] < 0 || values[i] >= float64(data.population_size) {
+			if values[i] < 0 || values[i] >= float64(data.populationSize) {
 				t.Errorf("Sample found that's not from population: %d", values[i])
 			}
 		}

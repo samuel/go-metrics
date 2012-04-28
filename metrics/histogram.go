@@ -14,24 +14,24 @@ type Sample interface {
 }
 
 type Histogram struct {
-	sample     Sample
-	min        float64
-	max        float64
-	sum        float64
-	count      int
-	variance_m float64
-	variance_s float64
+	sample    Sample
+	min       float64
+	max       float64
+	sum       float64
+	count     int
+	varianceM float64
+	varianceS float64
 }
 
 func NewHistogram(sample Sample) *Histogram {
 	return &Histogram{
-		sample:     sample,
-		min:        0,
-		max:        0,
-		sum:        0,
-		count:      0,
-		variance_m: 0,
-		variance_s: 0}
+		sample:    sample,
+		min:       0,
+		max:       0,
+		sum:       0,
+		count:     0,
+		varianceM: 0,
+		varianceS: 0}
 }
 
 /*
@@ -64,8 +64,8 @@ func (self *Histogram) Clear() {
 	self.max = 0
 	self.sum = 0
 	self.count = 0
-	self.variance_m = 0
-	self.variance_s = 0
+	self.varianceM = 0
+	self.varianceS = 0
 }
 
 func (self *Histogram) Update(value float64) {
@@ -75,7 +75,7 @@ func (self *Histogram) Update(value float64) {
 	if self.count == 1 {
 		self.min = value
 		self.max = value
-		self.variance_m = value
+		self.varianceM = value
 	} else {
 		if value < self.min {
 			self.min = value
@@ -83,9 +83,9 @@ func (self *Histogram) Update(value float64) {
 		if value > self.max {
 			self.max = value
 		}
-		old_m := self.variance_m
-		self.variance_m = old_m + ((value - old_m) / float64(self.count))
-		self.variance_s += (value - old_m) * (value - self.variance_m)
+		old_m := self.varianceM
+		self.varianceM = old_m + ((value - old_m) / float64(self.count))
+		self.varianceS += (value - old_m) * (value - self.varianceM)
 	}
 }
 
@@ -120,7 +120,7 @@ func (self *Histogram) Mean() float64 {
 
 func (self *Histogram) StdDev() float64 {
 	if self.count > 0 {
-		return math.Sqrt(self.variance_s / float64(self.count-1))
+		return math.Sqrt(self.varianceS / float64(self.count-1))
 	}
 	return 0
 }
@@ -129,7 +129,7 @@ func (self *Histogram) Variance() float64 {
 	if self.count <= 1 {
 		return 0
 	}
-	return self.variance_s / float64(self.count-1)
+	return self.varianceS / float64(self.count-1)
 }
 
 func (self *Histogram) Percentiles(percentiles []float64) []float64 {
