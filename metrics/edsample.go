@@ -58,9 +58,7 @@ func (self *Reservoir) Less(i, j int) bool {
 }
 
 func (self *Reservoir) Swap(i, j int) {
-	a := self.samples[i]
-	self.samples[i] = self.samples[j]
-	self.samples[j] = a
+	self.samples[i], self.samples[j] = self.samples[j], self.samples[i]
 }
 
 func (self *Reservoir) Push(x interface{}) {
