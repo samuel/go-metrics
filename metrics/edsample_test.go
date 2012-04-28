@@ -30,7 +30,7 @@ func TestEDSampleSizes(t *testing.T) {
 			t.Errorf("Size of sample should be %d but is %d", data.reservoir_size, sample.Len())
 		}
 		// Should only have elements from the population
-		values := sample.GetValues()
+		values := sample.Values()
 		for i := 0; i < len(values); i++ {
 			if values[i] < 0 || values[i] >= float64(data.population_size) {
 				t.Errorf("Sample found that's not from population: %d", values[i])

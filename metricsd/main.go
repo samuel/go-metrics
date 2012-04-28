@@ -49,10 +49,10 @@ func parseFlags() {
 	}
 	for _, s := range strings.Split(*f_perc, ",") {
 		p, err := strconv.ParseFloat(s, 64)
-		if err != nil {
+		switch {
+		case err != nil:
 			log.Fatal("Couldn't parse percentile flag: " + err.Error())
-		}
-		if p < 0 || p > 1 {
+		case p < 0 || p > 1:
 			log.Fatalf("Invalid percentile: %f", p)
 		}
 		percentiles = append(percentiles, p)
@@ -81,9 +81,10 @@ func packetLoop(l net.PacketConn) {
 			binary.Read(bytes.NewBuffer(buf[1:9]), binary.BigEndian, &value)
 			name := string(buf[9:n])
 
-			if mtype == 'c' {
+			switch mtype {
+			case 'c':
 				updateCounter(name, value)
-			} else if mtype == 't' {
+			case 't':
 				updateHistogram(name, value)
 			}
 		}
@@ -152,8 +153,8 @@ func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]
 		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: value})
 	}
 	for name, hist := range histograms {
-		metrics.Gauges = append(metrics.Gauges, librato.Metric{Name: name, Value: hist.GetMean()})
-		for i, p := range hist.GetPercentiles(percentiles) {
+		metrics.Gauges = append(metrics.Gauges, librato.Metric{Name: name, Value: hist.Mean()})
+		for i, p := range hist.Percentiles(percentiles) {
 			metrics.Gauges = append(metrics.Gauges,
 				librato.Metric{Name: fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), Value: p})
 		}
@@ -169,10 +170,10 @@ func sendMetricsStatHat(ts time.Time, counters map[string]float64, histograms ma
 		}
 	}
 	for name, hist := range histograms {
-		if err := stathat.PostEZValue(name, *f_stathat, hist.GetMean()); err != nil {
+		if err := stathat.PostEZValue(name, *f_stathat, hist.Mean()); err != nil {
 			return err
 		}
-		for i, p := range hist.GetPercentiles(percentiles) {
+		for i, p := range hist.Percentiles(percentiles) {
 			if err := stathat.PostEZValue(fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), *f_stathat, p); err != nil {
 				return err
 			}

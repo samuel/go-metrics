@@ -1,13 +1,3 @@
-// An exponentially-decaying random sample of {@code long}s. Uses Cormode et
-// al's forward-decaying priority reservoir sampling method to produce a
-// statistically representative sample, exponentially biased towards newer
-// entries.
-// 
-// http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf
-// Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
-// Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
-// Data Engineering (2009)
-
 package metrics
 
 import (
@@ -34,7 +24,7 @@ type Reservoir struct {
 }
 
 func (self *Reservoir) String() string {
-	return fmt.Sprintf("%s", self.GetValues())
+	return fmt.Sprintf("%s", self.Values())
 }
 
 func (self *Reservoir) Clear() {
@@ -45,12 +35,12 @@ func (self *Reservoir) Get(i int) PriorityValue {
 	return self.samples[i]
 }
 
-func (self *Reservoir) GetValues() []float64 {
-	values := make([]float64, len(self.samples))
+func (self *Reservoir) Values() (values []float64) {
+	values = make([]float64, len(self.samples))
 	for i := 0; i < len(self.samples); i++ {
 		values[i] = self.samples[i].value
 	}
-	return values
+	return
 }
 
 func (self *Reservoir) ScalePriority(scale float64) {
@@ -83,8 +73,15 @@ func (self *Reservoir) Pop() interface{} {
 	return v
 }
 
-// ExponentiallyDecayingSample
-
+// An exponentially-decaying random sample of values. Uses Cormode et
+// al's forward-decaying priority reservoir sampling method to produce a
+// statistically representative sample, exponentially biased towards newer
+// entries.
+//
+// http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf
+// Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
+// Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
+// Data Engineering (2009)
 type ExponentiallyDecayingSample struct {
 	// the number of samples to keep in the sampling reservoir
 	reservoir_size int
@@ -122,8 +119,8 @@ func (self *ExponentiallyDecayingSample) Len() int {
 	return vl
 }
 
-func (self *ExponentiallyDecayingSample) GetValues() []float64 {
-	return self.values.GetValues()
+func (self *ExponentiallyDecayingSample) Values() []float64 {
+	return self.values.Values()
 }
 
 func (self *ExponentiallyDecayingSample) Update(value float64) {
@@ -133,8 +130,7 @@ func (self *ExponentiallyDecayingSample) Update(value float64) {
 	if self.count <= self.reservoir_size {
 		heap.Push(self.values, PriorityValue{priority, value})
 	} else {
-		first := self.values.Get(0)
-		if first.priority > priority {
+		if first := self.values.Get(0); first.priority > priority {
 			// heap.Replace(self.values, PriorityValue{priority, value})
 			heap.Pop(self.values)
 			heap.Push(self.values, PriorityValue{priority, value})

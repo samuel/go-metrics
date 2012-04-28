@@ -47,8 +47,8 @@ func TestEWMA(t *testing.T) {
 		for i := 0; i < data.minutes*60/5; i++ {
 			e.Tick()
 		}
-		if !almostEqual(e.GetRate(), data.expected, 0.00000001) {
-			t.Errorf("EWMA alpha=%.8f minutes=%d expected=%.8f != %.8f", data.alpha, data.minutes, data.expected, e.GetRate())
+		if !almostEqual(e.Rate(), data.expected, 0.00000001) {
+			t.Errorf("EWMA alpha=%.8f minutes=%d expected=%.8f != %.8f", data.alpha, data.minutes, data.expected, e.Rate())
 		}
 	}
 }

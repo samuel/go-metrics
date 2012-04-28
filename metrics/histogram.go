@@ -9,7 +9,7 @@ import (
 type Sample interface {
 	Clear()
 	Len() int
-	GetValues() []float64
+	Values() []float64
 	Update(value float64)
 }
 
@@ -89,65 +89,66 @@ func (self *Histogram) Update(value float64) {
 	}
 }
 
-func (self *Histogram) GetCount() int {
+func (self *Histogram) Count() int {
 	return self.count
 }
 
-func (self *Histogram) GetSum() float64 {
+func (self *Histogram) Sum() float64 {
 	return self.sum
 }
 
-func (self *Histogram) GetMin() float64 {
+func (self *Histogram) Min() float64 {
 	if self.count == 0 {
 		return math.NaN()
 	}
 	return self.min
 }
 
-func (self *Histogram) GetMax() float64 {
+func (self *Histogram) Max() float64 {
 	if self.count == 0 {
 		return math.NaN()
 	}
 	return self.max
 }
 
-func (self *Histogram) GetMean() float64 {
+func (self *Histogram) Mean() float64 {
 	if self.count > 0 {
 		return self.sum / float64(self.count)
 	}
 	return 0
 }
 
-func (self *Histogram) GetStdDev() float64 {
+func (self *Histogram) StdDev() float64 {
 	if self.count > 0 {
 		return math.Sqrt(self.variance_s / float64(self.count-1))
 	}
 	return 0
 }
 
-func (self *Histogram) GetVariance() float64 {
+func (self *Histogram) Variance() float64 {
 	if self.count <= 1 {
 		return 0
 	}
 	return self.variance_s / float64(self.count-1)
 }
 
-func (self *Histogram) GetPercentiles(percentiles []float64) []float64 {
+func (self *Histogram) Percentiles(percentiles []float64) []float64 {
 	scores := make([]float64, len(percentiles))
 	if self.count == 0 {
 		return scores
 	}
 
-	values := sort.Float64Slice(self.sample.GetValues())
+	values := sort.Float64Slice(self.sample.Values())
 	sort.Sort(values)
 	for i, p := range percentiles {
 		pos := p * float64(len(values)+1)
 		ipos := int(pos)
-		if ipos < 1 {
+		switch {
+		case ipos < 1:
 			scores[i] = values[0]
-		} else if ipos >= len(values) {
+		case ipos >= len(values):
 			scores[i] = values[len(values)-1]
-		} else {
+		default:
 			lower := values[ipos-1]
 			upper := values[ipos]
 			scores[i] = lower + (pos-math.Floor(pos))*(upper-lower)
@@ -157,6 +158,6 @@ func (self *Histogram) GetPercentiles(percentiles []float64) []float64 {
 	return scores
 }
 
-func (self *Histogram) GetValues() []float64 {
-	return self.sample.GetValues()
+func (self *Histogram) Values() []float64 {
+	return self.sample.Values()
 }

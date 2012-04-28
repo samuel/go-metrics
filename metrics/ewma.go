@@ -1,8 +1,3 @@
-// An exponentially-weighted moving average.
-// 
-// http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf - UNIX Load Average Part 1: How It Works
-// http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf - UNIX Load Average Part 2: Not Your Average Average
-
 package metrics
 
 const (
@@ -11,6 +6,10 @@ const (
 	M15_ALPHA = 0.00554015199510327072118798241717740893363952636719 // 1 - math.Exp(-5 / 60.0 / 15)
 )
 
+// An exponentially-weighted moving average.
+//
+// http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf - UNIX Load Average Part 1: How It Works
+// http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf - UNIX Load Average Part 2: Not Your Average Average
 type EWMA struct {
 	interval  uint32  // exptected tick interval in seconds
 	alpha     float64 // the smoothing constant
@@ -37,6 +36,6 @@ func (self *EWMA) Tick() {
 	}
 }
 
-func (self *EWMA) GetRate() float64 {
+func (self *EWMA) Rate() float64 {
 	return self.rate
 }

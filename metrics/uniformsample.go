@@ -42,6 +42,6 @@ func (self *UniformSample) Update(value float64) {
 	}
 }
 
-func (self *UniformSample) GetValues() []float64 {
+func (self *UniformSample) Values() []float64 {
 	return self.values[:minInt(self.count, self.reservoir_size)]
 }
