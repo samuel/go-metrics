@@ -28,11 +28,11 @@ func (self *EWMA) Update(value float64) {
 func (self *EWMA) Tick() {
 	count := self.uncounted
 	self.uncounted = 0
-	instant_rate := count / float64(self.interval)
+	instantRate := count / float64(self.interval)
 	if self.rate == 0.0 {
-		self.rate = instant_rate
+		self.rate = instantRate
 	} else {
-		self.rate += self.alpha * (instant_rate - self.rate)
+		self.rate += self.alpha * (instantRate - self.rate)
 	}
 }
 

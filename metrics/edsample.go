@@ -37,8 +37,8 @@ func (self *Reservoir) Get(i int) PriorityValue {
 
 func (self *Reservoir) Values() (values []float64) {
 	values = make([]float64, len(self.samples))
-	for i := 0; i < len(self.samples); i++ {
-		values[i] = self.samples[i].value
+	for i, sample := range self.samples {
+		values[i] = sample.value
 	}
 	return
 }

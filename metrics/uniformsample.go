@@ -1,14 +1,13 @@
-// A random sample of a stream. Uses Vitter's Algorithm R to produce a
-// statistically representative sample.
-// 
-// http://www.cs.umd.edu/~samir/498/vitter.pdf - Random Sampling with a Reservoir
-
 package metrics
 
 import (
 	"math/rand"
 )
 
+// A random sample of a stream. Uses Vitter's Algorithm R to produce a
+// statistically representative sample.
+//
+// http://www.cs.umd.edu/~samir/498/vitter.pdf - Random Sampling with a Reservoir
 type UniformSample struct {
 	reservoirSize int
 	values        []float64
