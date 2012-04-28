@@ -14,28 +14,28 @@ const (
 
 // Reservoir
 
-type PriorityValue struct {
+type priorityValue struct {
 	priority float64
 	value    float64
 }
 
-type Reservoir struct {
-	samples []PriorityValue
+type reservoir struct {
+	samples []priorityValue
 }
 
-func (self *Reservoir) String() string {
+func (self *reservoir) String() string {
 	return fmt.Sprintf("%s", self.Values())
 }
 
-func (self *Reservoir) Clear() {
+func (self *reservoir) Clear() {
 	self.samples = self.samples[0:0]
 }
 
-func (self *Reservoir) Get(i int) PriorityValue {
+func (self *reservoir) Get(i int) priorityValue {
 	return self.samples[i]
 }
 
-func (self *Reservoir) Values() (values []float64) {
+func (self *reservoir) Values() (values []float64) {
 	values = make([]float64, len(self.samples))
 	for i, sample := range self.samples {
 		values[i] = sample.value
@@ -43,32 +43,44 @@ func (self *Reservoir) Values() (values []float64) {
 	return
 }
 
-func (self *Reservoir) ScalePriority(scale float64) {
+func (self *reservoir) ScalePriority(scale float64) {
 	for i, sample := range self.samples {
-		self.samples[i] = PriorityValue{sample.priority * scale, sample.value}
+		self.samples[i] = priorityValue{sample.priority * scale, sample.value}
 	}
 }
 
-func (self *Reservoir) Len() int {
+func (self *reservoir) Len() int {
 	return len(self.samples)
 }
 
-func (self *Reservoir) Less(i, j int) bool {
+func (self *reservoir) Less(i, j int) bool {
 	return self.samples[i].priority < self.samples[j].priority
 }
 
-func (self *Reservoir) Swap(i, j int) {
+func (self *reservoir) Swap(i, j int) {
 	self.samples[i], self.samples[j] = self.samples[j], self.samples[i]
 }
 
-func (self *Reservoir) Push(x interface{}) {
-	self.samples = append(self.samples, x.(PriorityValue))
+func (self *reservoir) Push(x interface{}) {
+	self.samples = append(self.samples, x.(priorityValue))
 }
 
-func (self *Reservoir) Pop() interface{} {
+func (self *reservoir) Pop() interface{} {
 	v := self.samples[len(self.samples)-1]
 	self.samples = self.samples[:len(self.samples)-1]
 	return v
+}
+
+type exponentiallyDecayingSample struct {
+	// the number of samples to keep in the sampling reservoir
+	reservoirSize int
+	// the exponential decay factor; the higher this is, the more
+	// biased the sample will be towards newer values
+	alpha         float64
+	values        *reservoir
+	count         int
+	startTime     time.Time
+	nextScaleTime time.Time
 }
 
 // An exponentially-decaying random sample of values. Uses Cormode et
@@ -80,28 +92,16 @@ func (self *Reservoir) Pop() interface{} {
 // Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
 // Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
 // Data Engineering (2009)
-type ExponentiallyDecayingSample struct {
-	// the number of samples to keep in the sampling reservoir
-	reservoirSize int
-	// the exponential decay factor; the higher this is, the more
-	// biased the sample will be towards newer values
-	alpha         float64
-	values        *Reservoir
-	count         int
-	startTime     time.Time
-	nextScaleTime time.Time
-}
-
-func NewExponentiallyDecayingSample(reservoirSize int, alpha float64) *ExponentiallyDecayingSample {
-	eds := ExponentiallyDecayingSample{
+func NewExponentiallyDecayingSample(reservoirSize int, alpha float64) Sample {
+	eds := exponentiallyDecayingSample{
 		reservoirSize: reservoirSize,
 		alpha:         alpha,
-		values:        &Reservoir{}}
+		values:        &reservoir{}}
 	eds.Clear()
 	return &eds
 }
 
-func (self *ExponentiallyDecayingSample) Clear() {
+func (self *exponentiallyDecayingSample) Clear() {
 	self.values.Clear()
 	heap.Init(self.values)
 	self.count = 0
@@ -109,7 +109,7 @@ func (self *ExponentiallyDecayingSample) Clear() {
 	self.nextScaleTime = self.startTime.Add(RESCALE_THRESHOLD)
 }
 
-func (self *ExponentiallyDecayingSample) Len() int {
+func (self *exponentiallyDecayingSample) Len() int {
 	vl := self.values.Len()
 	if self.count < vl {
 		return self.count
@@ -117,21 +117,21 @@ func (self *ExponentiallyDecayingSample) Len() int {
 	return vl
 }
 
-func (self *ExponentiallyDecayingSample) Values() []float64 {
+func (self *exponentiallyDecayingSample) Values() []float64 {
 	return self.values.Values()
 }
 
-func (self *ExponentiallyDecayingSample) Update(value float64) {
+func (self *exponentiallyDecayingSample) Update(value float64) {
 	timestamp := time.Now()
 	priority := self.weight(timestamp.Sub(self.startTime)) / rand.Float64()
 	self.count += 1
 	if self.count <= self.reservoirSize {
-		heap.Push(self.values, PriorityValue{priority, value})
+		heap.Push(self.values, priorityValue{priority, value})
 	} else {
 		if first := self.values.Get(0); first.priority > priority {
-			// heap.Replace(self.values, PriorityValue{priority, value})
+			// heap.Replace(self.values, priorityValue{priority, value})
 			heap.Pop(self.values)
-			heap.Push(self.values, PriorityValue{priority, value})
+			heap.Push(self.values, priorityValue{priority, value})
 		}
 	}
 
@@ -140,7 +140,7 @@ func (self *ExponentiallyDecayingSample) Update(value float64) {
 	}
 }
 
-func (self *ExponentiallyDecayingSample) weight(delta time.Duration) float64 {
+func (self *exponentiallyDecayingSample) weight(delta time.Duration) float64 {
 	return math.Exp(self.alpha * float64(delta))
 }
 
@@ -163,7 +163,7 @@ and obtain the correct value as if we had instead computed relative to a new
 landmark L′ (and then use this new L′ at query time). This can be done with
 a linear pass over whatever data structure is being used.
 */
-func (self *ExponentiallyDecayingSample) rescale(now time.Time) {
+func (self *exponentiallyDecayingSample) rescale(now time.Time) {
 	self.nextScaleTime = now.Add(RESCALE_THRESHOLD)
 	oldStartTime := self.startTime
 	self.startTime = now
