@@ -14,7 +14,7 @@ import (
 
 	"github.com/samuel/go-librato"
 	"github.com/samuel/go-metrics/metrics"
-	"github.com/samuel/stathatgo"
+	"github.com/stathat/stathatgo1"
 )
 
 const (
