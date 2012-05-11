@@ -7,116 +7,147 @@ import (
 
 var (
 	metricsMu   sync.Mutex
-	recvMu      sync.Mutex
-	counters    = make(map[string]uint64)
-	counterfs   = make(map[string]float64)
-	histograms  = make(map[string]*Histogram)
-	snapHistory = make(map[string][]Snapshot)
-	receivers   = make(map[string][]MetricsReceiver)
+	snapshot    = NewSnapshot()
+	snapHistory = make([]*Snapshot, 0)
+	receivers   = make([]MetricsReceiver, 0)
+	metfuncs    = make([]MetricsFunction, 0)
 )
 
 type Snapshot struct {
-	Counters     map[string]uint64
-	Counterfs    map[string]float64
-	Ts           int64
-	Histograms   map[string]*Histogram
+	Ints       MetricInt             `json:"ints"`
+	Floats     map[string]float64    `json:"floats"`
+	Histograms map[string]*Histogram `json:"histograms"`
+	Ts         int64                 `json:"ts"`
 }
 
-
-type MetricsReceiver func(string,Snapshot)
-
-func History() map[string][]Snapshot {
-	metricsMu.Lock()
-	history := make(map[string][]Snapshot)
-	for n, hist := range snapHistory {
-		newSnaps := make([]Snapshot,len(hist))
-		for i, snap := range hist {
-			newSnaps[i] = snap
-		}
-		history[n] = newSnaps
+func NewSnapshot() *Snapshot {
+	return &Snapshot{
+		Ints:       make(MetricInt),
+		Floats:     make(MetricFloat),
+		Histograms: make(MetricHistogram),
 	}
-	metricsMu.Unlock()
-	return history
 }
 
-func swapMetrics(name string, maxHistory int, n time.Time) Snapshot {
+type MetricInt map[string]uint64
+type MetricFloat map[string]float64
+type MetricHistogram map[string]*Histogram
+type MetricsReceiver func(Snapshot)
+type MetricsFunction func(*Snapshot)
+
+// History grabs a record of Snapshots from memory
+func History() []Snapshot {
 	metricsMu.Lock()
-
-	snap := Snapshot{
-		Counters:counters,
-		Counterfs:counterfs,
-		Ts:n.UnixNano(),
-		Histograms:histograms,
+	newSnaps := make([]Snapshot, len(snapHistory))
+	for i, snap := range snapHistory {
+		newSnaps[i] = *snap
 	}
-
-	counters    = make(map[string]uint64)
-	counterfs   = make(map[string]float64)
-	histograms  = make(map[string]*Histogram)
-
-	for n, hist := range snapHistory {
-		if len(hist) > maxHistory {
-			snapHistory[n] = hist[1:]
-		}
-	}
-
-	snapHistory[name] = append(snapHistory[name], snap)
 	metricsMu.Unlock()
-	return snap
+	return newSnaps
+}
+
+func swapMetrics(maxHistory int, n time.Time) {
+	// NOTE: this has no lock, it is in the call to this
+
+	// regardless of if any current metrics for this unit, lets chop one
+	if len(snapHistory) > maxHistory {
+		snapHistory = snapHistory[1:]
+	}
+
+	// if we have collected any metrics, add to history
+	snapHistory = append(snapHistory, snapshot)
+
+	snapshot = NewSnapshot()
 }
 
 // Update Float Counter
 func UpdateCounterf(name string, value float64) {
 	metricsMu.Lock()
-	counterfs[name] += value
+	snapshot.Floats[name] += value
 	metricsMu.Unlock()
 }
 
 // Increment an integer counter
 func IncrCounter(name string) {
 	metricsMu.Lock()
-	counters[name] ++
+	snapshot.Ints[name]++
 	metricsMu.Unlock()
 }
 
 // Add value to a histogram
 func UpdateHistogram(name string, value float64) {
 	metricsMu.Lock()
-	hist := histograms[name]
+	hist := snapshot.Histograms[name]
 	if hist == nil {
 		hist = NewUnbiasedHistogram()
-		histograms[name] = hist
+		snapshot.Histograms[name] = hist
 	}
 	hist.Update(value)
 	metricsMu.Unlock()
 }
 
 // this is a blocking Runner, that starts a heartbeat to 
-// take metrics snapshots at specified time, it also calls back
-// to any receivers
-func RunMetricsHeartbeat(name string, maxHistory int, tick time.Duration) {
+// take metrics snapshots at specified time intervals, it also calls back
+// to any receivers you have setup
+func RunMetricsHeartbeat(maxHistory int, tick time.Duration) {
 
-	// lets poll back to take metrics snapshots
 	timer := time.NewTicker(tick)
 
 	for n := range timer.C {
-		snap := swapMetrics(name,maxHistory, n)
-		recvMu.Lock()
-		recvs := receivers[name]
-		for _, recv := range recvs {
-			recv(name,snap)
+		metricsMu.Lock()
+
+		curSnap := snapshot
+		curSnap.Ts = n.UnixNano()
+
+		for _, mfn := range metfuncs {
+			//metricsMu.Unlock() ??
+			mfn(curSnap)
+			//metricsMu.Lock()
 		}
-		recvMu.Unlock()
+
+		swapMetrics(maxHistory, n)
+
+		for _, recv := range receivers {
+			go recv(*curSnap)
+		}
+
+		metricsMu.Unlock()
 	}
 }
 
-// register to get a callback for every Metrics Snapshot
-func AddSnapshotReceiver(name string, receiver MetricsReceiver) {
-	recvMu.Lock()
-	recvs, ok := receivers[name]
-	if  !ok {
-		recvs = make([]MetricsReceiver,0)
-	}
-	recvs = append(recvs, receiver)
-	receivers[name] = recvs
-	recvMu.Unlock()
+// register to get a callback for every Metrics Snapshot (after it has been taken)
+// this is optional, and allows you to view, save, send the metrics::
+//		
+//		metrics.AddSnapshotReceiver(func(snap metrics.Snapshot){
+//			mongdb.Save(snap)
+//		})
+//		go metrics.RunMetricsHeartbeat(0, time.Second * 60)
+//
+func AddSnapshotReceiver(receiver MetricsReceiver) {
+	metricsMu.Lock()
+	receivers = append(receivers, receiver)
+	metricsMu.Unlock()
+}
+
+// register to get a callback Before every snapshot is taken, and add data.  Instead
+// of incrementing values continually, this is good if you already have internal data
+// that you want to take a guage on.  You can also calculate derived metrics.::
+//		
+//		var myVarName float64 = 2000
+//		var curUsers int
+//		func foo(r http.Request) {
+//			myVarName += len(r.Body)
+//			metrics.IncrCounter("my_requests")
+//		}
+//		
+//		metrics.AddMetricsFunction(func(snap *metrics.Snapshot){
+//			snap.Ints["my_custom_value"] = uint64(myVarName) 
+//			snap.Ints["requests_peruser"] = snap.Ints["my_requests"] / curUsers  
+//		})
+//		
+//		go metrics.RunMetricsHeartbeat(0, time.Second * 60)
+//
+func AddMetricsFunction(metFunc MetricsFunction) {
+	metricsMu.Lock()
+	metfuncs = append(metfuncs, metFunc)
+	metricsMu.Unlock()
 }

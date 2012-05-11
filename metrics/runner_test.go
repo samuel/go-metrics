@@ -3,19 +3,17 @@ package metrics
 import (
 	"testing"
 	"time"
+	//"log"
 )
 
 func TestAddSnapshotReceiver(t *testing.T) {
 
 	// add a receiver
-	AddSnapshotReceiver("60sec", func(name string, snap Snapshot){
-	   	//log.Println("Metrics Snapshot ", name, snap.Ts, snap.Counters)
+	AddSnapshotReceiver(func(snap Snapshot) {
+		//log.Println("Metrics Snapshot ", name, snap.Ts, snap.Counters)
 	})
 	if len(receivers) != 1 {
 		t.Errorf("Should have added Receiver to map%d", len(receivers))
-	}
-	if recvs, ok:= receivers["60sec"]; !ok || len(recvs) != 1 {
-		t.Errorf("Should have added Receiver to list %d", len(recvs))
 	}
 
 }
@@ -23,12 +21,12 @@ func TestAddSnapshotReceiver(t *testing.T) {
 func TestReceiverCallback(t *testing.T) {
 	var isDone bool
 	var snapTest Snapshot
-	AddSnapshotReceiver("1sec", func(name string, snap Snapshot){
+	AddSnapshotReceiver(func(snap Snapshot) {
 		snapTest = snap
 		isDone = true
 	})
 	// start metrics:  keep 10 snapshots in history, every 200 milliseconds
-	go RunMetricsHeartbeat("1sec", 10 ,200 * time.Millisecond)
+	go RunMetricsHeartbeat(10, 500*time.Millisecond)
 	//time.Sleep(time.Millisecond * 20)// make sure its running
 	IncrCounter("test1")
 	IncrCounter("test1")
@@ -36,10 +34,30 @@ func TestReceiverCallback(t *testing.T) {
 
 	WaitFor(func() bool {
 		return isDone
-	},2)
+	}, 2)
 
-	if ct, ok := snapTest.Counters["test1"]; !ok || ct != 3 {
+	if ct, ok := snapTest.Ints["test1"]; !ok || ct != 3 {
 		t.Errorf("Should have had a count of 3 but was %d", ct)
 	}
 }
 
+func TestMetricsFunction(t *testing.T) {
+	var isDone bool
+	var snapTest Snapshot
+	AddMetricsFunction(func(snap *Snapshot) {
+		snap.Ints["test_metricsx"] = 900
+	})
+	AddSnapshotReceiver(func(snap Snapshot) {
+		snapTest = snap
+		isDone = true
+	})
+	go RunMetricsHeartbeat(10, 500*time.Millisecond)
+
+	WaitFor(func() bool {
+		return isDone
+	}, 2)
+
+	if ct, ok := snapTest.Ints["test_metricsx"]; !ok || ct != 900 {
+		t.Errorf("Should have had a count of 900 but was %d", ct)
+	}
+}
