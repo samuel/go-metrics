@@ -14,7 +14,7 @@ import (
 
 	"github.com/samuel/go-librato"
 	"github.com/samuel/go-metrics/metrics"
-	"github.com/stathat/stathatgo1"
+	"github.com/stathat/stathatgo"
 )
 
 const (
@@ -24,6 +24,7 @@ const (
 var (
 	f_laddr    = flag.String("l", "0.0.0.0:5252", "the address to listen on")
 	f_perc     = flag.String("p", "0.90,0.99,0.999", "comma separated list of percentiles to record")
+	f_graphite = flag.String("g", "", "host:port for Graphite's Carbon")
 	f_username = flag.String("u", "", "librato metrics username")
 	f_token    = flag.String("t", "", "librato metrics token")
 	f_stathat  = flag.String("s", "", "StatHat email")
@@ -44,8 +45,8 @@ func main() {
 
 func parseFlags() {
 	flag.Parse()
-	if *f_stathat == "" && (*f_username == "" || *f_token == "") {
-		log.Fatal("Either StatHat email or Librato username & token required")
+	if *f_stathat == "" && (*f_username == "" || *f_token == "") && *f_graphite == "" {
+		log.Fatal("Either StatHat email, Librato username & token, or Graphite/Carbon required")
 	}
 	for _, s := range strings.Split(*f_perc, ",") {
 		p, err := strconv.ParseFloat(s, 64)
@@ -119,6 +120,12 @@ func reporter() {
 		counters, histograms := swapMetrics()
 
 		if len(counters) > 0 || len(histograms) > 0 {
+			if *f_graphite != "" {
+				if err := sendMetricsGraphite(ts, counters, histograms); err != nil {
+					log.Printf(err.Error())
+				}
+			}
+
 			if met != nil {
 				if err := sendMetricsLibrato(met, ts, counters, histograms); err != nil {
 					log.Printf(err.Error())
@@ -145,6 +152,24 @@ func swapMetrics() (oldcounters map[string]float64, oldhistograms map[string]*me
 	histograms = make(map[string]*metrics.Histogram)
 
 	return
+}
+
+func sendMetricsGraphite(ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+	conn, err := net.Dial("tcp", *f_graphite)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	for name, value := range counters {
+		fmt.Fprintf(conn, "%s %f %d\n", name, value, ts.Unix())
+	}
+	for name, hist := range histograms {
+		for i, p := range hist.Percentiles(percentiles) {
+			fmt.Fprintf(conn, "%s:%.2f %f %d\n", name, percentiles[i]*100, p, ts.Unix())
+		}
+	}
+
+	return nil
 }
 
 func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
