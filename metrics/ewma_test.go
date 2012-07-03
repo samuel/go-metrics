@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"testing"
+	"time"
 )
 
 type testStruct struct {
@@ -41,7 +42,7 @@ var testData = []testStruct{
 
 func TestEWMA(t *testing.T) {
 	for _, data := range testData {
-		e := NewEWMA(5, data.alpha)
+		e := NewEWMA(time.Second*5, data.alpha)
 		e.Update(3)
 		e.Tick()
 		for i := 0; i < data.minutes*60/5; i++ {
@@ -50,5 +51,19 @@ func TestEWMA(t *testing.T) {
 		if !almostEqual(e.Rate(), data.expected, 0.00000001) {
 			t.Errorf("EWMA alpha=%.8f minutes=%d expected=%.8f != %.8f", data.alpha, data.minutes, data.expected, e.Rate())
 		}
+	}
+}
+
+func TestEWMATicker(t *testing.T) {
+	e := NewEWMA(time.Millisecond*50, M1_ALPHA)
+	e.Start()
+	if e.ticker == nil {
+		t.Errorf("EWMA.ticker should not be nil")
+	}
+	time.Sleep(time.Millisecond * 100)
+	e.Stop()
+	time.Sleep(time.Millisecond * 50)
+	if e.ticker != nil {
+		t.Errorf("EWMA.ticker should be nil")
 	}
 }
