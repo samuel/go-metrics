@@ -6,10 +6,10 @@ import (
 	"sync/atomic"
 )
 
-const (
-	M1_ALPHA  = 0.07995558537067670723530454779393039643764495849609 // 1 - math.Exp(-5 / 60.0)
-	M5_ALPHA  = 0.01652854617838250828043555884505622088909149169922 // 1 - math.Exp(-5 / 60.0 / 5)
-	M15_ALPHA = 0.00554015199510327072118798241717740893363952636719 // 1 - math.Exp(-5 / 60.0 / 15)
+var (
+	M1Alpha  = 1 - math.Exp(-5/60.0)
+	M5Alpha  = 1 - math.Exp(-5/60.0/5)
+	M15Alpha = 1 - math.Exp(-5/60.0/15)
 )
 
 // An exponentially-weighted moving average.
@@ -20,6 +20,7 @@ type EWMA struct {
 	interval       time.Duration // tick interval in seconds
 	alpha          float64       // the smoothing constant
 	uncounted      uint64
+	initialized    bool
 	rate           uint64 // really a float64 but using uint64 for atomicity
 	ticker         *time.Ticker
 	tickerStopChan chan bool
@@ -27,8 +28,9 @@ type EWMA struct {
 
 func NewEWMA(interval time.Duration, alpha float64) *EWMA {
 	ewma := &EWMA{
-		interval: interval,
-		alpha:    alpha,
+		interval:    interval,
+		alpha:       alpha,
+		initialized: false,
 	}
 	return ewma
 }
@@ -82,10 +84,11 @@ func (ewma *EWMA) Tick() {
 	atomic.AddUint64(&ewma.uncounted, -count)
 	instantRate := float64(count) / ewma.interval.Seconds()
 	rate := ewma.Rate()
-	if rate == 0.0 {
-		rate = instantRate
-	} else {
+	if ewma.initialized {
 		rate += ewma.alpha * (instantRate - rate)
+	} else {
+		rate = instantRate
+		ewma.initialized = true
 	}
 	atomic.StoreUint64(&ewma.rate, math.Float64bits(rate))
 }
