@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	RESCALE_THRESHOLD = 360e9 // nanoseconds
+	RESCALE_THRESHOLD = time.Hour
 )
 
 // Reservoir
@@ -110,11 +110,10 @@ func (self *exponentiallyDecayingSample) Clear() {
 }
 
 func (self *exponentiallyDecayingSample) Len() int {
-	vl := self.values.Len()
-	if self.count < vl {
+	if self.count < self.reservoirSize {
 		return self.count
 	}
-	return vl
+	return self.reservoirSize
 }
 
 func (self *exponentiallyDecayingSample) Values() []float64 {

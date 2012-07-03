@@ -1,7 +1,9 @@
 package metrics
 
 import (
+	"math"
 	"time"
+	"sync/atomic"
 )
 
 const (
@@ -17,8 +19,8 @@ const (
 type EWMA struct {
 	interval       time.Duration // tick interval in seconds
 	alpha          float64       // the smoothing constant
-	uncounted      float64
-	rate           float64
+	uncounted      uint64
+	rate           uint64 // really a float64 but using uint64 for atomicity
 	ticker         *time.Ticker
 	tickerStopChan chan bool
 }
@@ -31,14 +33,17 @@ func NewEWMA(interval time.Duration, alpha float64) *EWMA {
 	return ewma
 }
 
-func (ewma *EWMA) Update(value float64) {
-	ewma.uncounted += value
+// Increment the uncounted value - thread safe
+func (ewma *EWMA) Update(value uint64) {
+	atomic.AddUint64(&ewma.uncounted, value)
 }
 
+// Return the rate - thread safe
 func (ewma *EWMA) Rate() float64 {
-	return ewma.rate
+	return math.Float64frombits(atomic.LoadUint64(&ewma.rate))
 }
 
+// Start the ticker
 func (ewma *EWMA) Start() {
 	if ewma.ticker == nil {
 		ewma.ticker = time.NewTicker(ewma.interval)
@@ -47,6 +52,7 @@ func (ewma *EWMA) Start() {
 	}
 }
 
+// Stop the ticker
 func (ewma *EWMA) Stop() {
 	if ewma.ticker != nil {
 		ewma.ticker.Stop()
@@ -68,13 +74,18 @@ watcher:
 	ewma.tickerStopChan = nil
 }
 
+// Tick the moving average - NOT thread safe
 func (ewma *EWMA) Tick() {
-	count := ewma.uncounted
-	ewma.uncounted = 0
-	instantRate := count / ewma.interval.Seconds()
-	if ewma.rate == 0.0 {
-		ewma.rate = instantRate
+	// Assume Tick is never called concurrently
+	count := atomic.LoadUint64(&ewma.uncounted)
+	// Subtract the old count since there is no atomic get-and-set
+	atomic.AddUint64(&ewma.uncounted, -count)
+	instantRate := float64(count) / ewma.interval.Seconds()
+	rate := ewma.Rate()
+	if rate == 0.0 {
+		rate = instantRate
 	} else {
-		ewma.rate += ewma.alpha * (instantRate - ewma.rate)
+		rate += ewma.alpha * (instantRate - rate)
 	}
+	atomic.StoreUint64(&ewma.rate, math.Float64bits(rate))
 }
