@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 )
 
 type Sample interface {
@@ -18,9 +19,10 @@ type Histogram struct {
 	min       float64
 	max       float64
 	sum       float64
-	count     int
+	count     uint64
 	varianceM float64
 	varianceS float64
+	lock      sync.RWMutex
 }
 
 func NewHistogram(sample Sample) *Histogram {
@@ -53,92 +55,96 @@ func NewUnbiasedHistogram() *Histogram {
 	return NewHistogram(NewUniformSample(1028))
 }
 
-func (self *Histogram) String() string {
+func (h *Histogram) String() string {
 	return fmt.Sprintf("Histogram{sum:%.4f count:%d min:%.4f max:%.4f}",
-		self.sum, self.count, self.min, self.max)
+		h.sum, h.count, h.min, h.max)
 }
 
-func (self *Histogram) Clear() {
-	self.sample.Clear()
-	self.min = 0
-	self.max = 0
-	self.sum = 0
-	self.count = 0
-	self.varianceM = 0
-	self.varianceS = 0
+func (h *Histogram) Clear() {
+	h.lock.Lock()
+	h.sample.Clear()
+	h.min = 0
+	h.max = 0
+	h.sum = 0
+	h.count = 0
+	h.varianceM = 0
+	h.varianceS = 0
+	h.lock.Unlock()
 }
 
-func (self *Histogram) Update(value float64) {
-	self.count += 1
-	self.sum += value
-	self.sample.Update(value)
-	if self.count == 1 {
-		self.min = value
-		self.max = value
-		self.varianceM = value
+func (h *Histogram) Update(value float64) {
+	h.lock.Lock()
+	h.count += 1
+	h.sum += value
+	h.sample.Update(value)
+	if h.count == 1 {
+		h.min = value
+		h.max = value
+		h.varianceM = value
 	} else {
-		if value < self.min {
-			self.min = value
+		if value < h.min {
+			h.min = value
 		}
-		if value > self.max {
-			self.max = value
+		if value > h.max {
+			h.max = value
 		}
-		old_m := self.varianceM
-		self.varianceM = old_m + ((value - old_m) / float64(self.count))
-		self.varianceS += (value - old_m) * (value - self.varianceM)
+		old_m := h.varianceM
+		h.varianceM = old_m + ((value - old_m) / float64(h.count))
+		h.varianceS += (value - old_m) * (value - h.varianceM)
 	}
+	h.lock.Unlock()
 }
 
-func (self *Histogram) Count() int {
-	return self.count
+func (h *Histogram) Count() uint64 {
+	return h.count
 }
 
-func (self *Histogram) Sum() float64 {
-	return self.sum
+func (h *Histogram) Sum() float64 {
+	return h.sum
 }
 
-func (self *Histogram) Min() float64 {
-	if self.count == 0 {
+func (h *Histogram) Min() float64 {
+	if h.count == 0 {
 		return math.NaN()
 	}
-	return self.min
+	return h.min
 }
 
-func (self *Histogram) Max() float64 {
-	if self.count == 0 {
+func (h *Histogram) Max() float64 {
+	if h.count == 0 {
 		return math.NaN()
 	}
-	return self.max
+	return h.max
 }
 
-func (self *Histogram) Mean() float64 {
-	if self.count > 0 {
-		return self.sum / float64(self.count)
+func (h *Histogram) Mean() float64 {
+	if h.count > 0 {
+		return h.sum / float64(h.count)
 	}
 	return 0
 }
 
-func (self *Histogram) StdDev() float64 {
-	if self.count > 0 {
-		return math.Sqrt(self.varianceS / float64(self.count-1))
+func (h *Histogram) StdDev() float64 {
+	if h.count > 0 {
+		return math.Sqrt(h.varianceS / float64(h.count-1))
 	}
 	return 0
 }
 
-func (self *Histogram) Variance() float64 {
-	if self.count <= 1 {
+func (h *Histogram) Variance() float64 {
+	if h.count <= 1 {
 		return 0
 	}
-	return self.varianceS / float64(self.count-1)
+	return h.varianceS / float64(h.count-1)
 }
 
-func (self *Histogram) Percentiles(percentiles []float64) []float64 {
+func (h *Histogram) Percentiles(percentiles []float64) []float64 {
 	scores := make([]float64, len(percentiles))
-	if self.count == 0 {
+	if h.count == 0 {
 		return scores
 	}
 
-	values := sort.Float64Slice(self.sample.Values())
+	values := sort.Float64Slice(h.Values())
 	sort.Sort(values)
 	for i, p := range percentiles {
 		pos := p * float64(len(values)+1)
@@ -158,6 +164,9 @@ func (self *Histogram) Percentiles(percentiles []float64) []float64 {
 	return scores
 }
 
-func (self *Histogram) Values() []float64 {
-	return self.sample.Values()
+func (h *Histogram) Values() []float64 {
+	h.lock.RLock()
+	samples := h.sample.Values()
+	h.lock.RUnlock()
+	return samples
 }

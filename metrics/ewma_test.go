@@ -67,3 +67,17 @@ func TestEWMATicker(t *testing.T) {
 		t.Errorf("EWMA.ticker should be nil")
 	}
 }
+
+func BenchmarkEWMAUpdate(b *testing.B) {
+	e := NewEWMA(time.Second*5, M1Alpha)
+	for i := 0; i < b.N; i++ {
+		e.Update(1)
+	}
+}
+
+func BenchmarkEWMARate(b *testing.B) {
+	e := NewEWMA(time.Second*5, M1Alpha)
+	for i := 0; i < b.N; i++ {
+		e.Rate()
+	}
+}

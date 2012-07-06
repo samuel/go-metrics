@@ -36,3 +36,10 @@ func TestUSampleSizes(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkUniformSampleUpdate(b *testing.B) {
+	sample := NewUniformSample(1000)
+	for i := 0; i < b.N; i++ {
+		sample.Update(float64(i))
+	}
+}
