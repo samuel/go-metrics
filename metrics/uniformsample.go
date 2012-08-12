@@ -6,7 +6,7 @@ import (
 
 type uniformSample struct {
 	reservoirSize int
-	values        []float64
+	values        []int64
 	count         int
 }
 
@@ -15,7 +15,7 @@ type uniformSample struct {
 //
 // http://www.cs.umd.edu/~samir/498/vitter.pdf - Random Sampling with a Reservoir
 func NewUniformSample(reservoirSize int) Sample {
-	return &uniformSample{reservoirSize, make([]float64, reservoirSize), 0}
+	return &uniformSample{reservoirSize, make([]int64, reservoirSize), 0}
 }
 
 func (self *uniformSample) Clear() {
@@ -29,8 +29,8 @@ func (self *uniformSample) Len() int {
 	return self.reservoirSize
 }
 
-func (self *uniformSample) Update(value float64) {
-	self.count += 1
+func (self *uniformSample) Update(value int64) {
+	self.count++
 	if self.count <= self.reservoirSize {
 		self.values[self.count-1] = value
 	} else {
@@ -41,6 +41,6 @@ func (self *uniformSample) Update(value float64) {
 	}
 }
 
-func (self *uniformSample) Values() []float64 {
+func (self *uniformSample) Values() []int64 {
 	return self.values[:minInt(self.count, self.reservoirSize)]
 }

@@ -29,7 +29,7 @@ func TestHistogramEmpty(t *testing.T) {
 
 func TestHistogram1to10000(t *testing.T) {
 	histogram := NewHistogram(NewUniformSample(100000))
-	for i := 1.0; i <= 10000; i++ {
+	for i := int64(1); i <= 10000; i++ {
 		histogram.Update(i)
 	}
 	if histogram.Count() != 10000 {
@@ -54,7 +54,25 @@ func TestHistogram1to10000(t *testing.T) {
 	if len(perc) != 3 {
 		t.Errorf("Percentiles expected to return slice of len 3 not %d", len(perc))
 	}
-	if perc[0] != 5000.5 || perc[1] != 7500.75 || perc[2] != 9900.99 {
+	if perc[0] != 5000 || perc[1] != 7500 || perc[2] != 9900 {
 		t.Errorf("Percentiles returned an unexpected value")
+	}
+}
+
+func BenchmarkHistogramUpdate(b *testing.B) {
+	histogram := NewHistogram(NewUniformSample(1028))
+	for i := 0; i < b.N; i++ {
+		histogram.Update(int64(i))
+	}
+}
+
+func BenchmarkHistogramPercentiles(b *testing.B) {
+	histogram := NewHistogram(NewUniformSample(1028))
+	for i := 0; i < 2000; i++ {
+		histogram.Update(int64(i))
+	}
+	perc := []float64{0.5, 0.75, 0.9, 0.95, 0.99, 0.999, 0.9999}
+	for i := 0; i < b.N; i++ {
+		histogram.Percentiles(perc)
 	}
 }

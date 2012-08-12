@@ -10,15 +10,15 @@ import (
 type Sample interface {
 	Clear()
 	Len() int
-	Values() []float64
-	Update(value float64)
+	Values() []int64
+	Update(value int64)
 }
 
 type Histogram struct {
 	sample    Sample
-	min       float64
-	max       float64
-	sum       float64
+	min       int64
+	max       int64
+	sum       int64
 	count     uint64
 	varianceM float64
 	varianceS float64
@@ -72,15 +72,15 @@ func (h *Histogram) Clear() {
 	h.lock.Unlock()
 }
 
-func (h *Histogram) Update(value float64) {
+func (h *Histogram) Update(value int64) {
 	h.lock.Lock()
-	h.count += 1
+	h.count++
 	h.sum += value
 	h.sample.Update(value)
 	if h.count == 1 {
 		h.min = value
 		h.max = value
-		h.varianceM = value
+		h.varianceM = float64(value)
 	} else {
 		if value < h.min {
 			h.min = value
@@ -88,9 +88,10 @@ func (h *Histogram) Update(value float64) {
 		if value > h.max {
 			h.max = value
 		}
-		old_m := h.varianceM
-		h.varianceM = old_m + ((value - old_m) / float64(h.count))
-		h.varianceS += (value - old_m) * (value - h.varianceM)
+		floatValue := float64(value)
+		oldM := h.varianceM
+		h.varianceM = oldM + ((floatValue - oldM) / float64(h.count))
+		h.varianceS += (floatValue - oldM) * (floatValue - h.varianceM)
 	}
 	h.lock.Unlock()
 }
@@ -99,27 +100,27 @@ func (h *Histogram) Count() uint64 {
 	return h.count
 }
 
-func (h *Histogram) Sum() float64 {
+func (h *Histogram) Sum() int64 {
 	return h.sum
 }
 
-func (h *Histogram) Min() float64 {
+func (h *Histogram) Min() int64 {
 	if h.count == 0 {
-		return math.NaN()
+		return 0
 	}
 	return h.min
 }
 
-func (h *Histogram) Max() float64 {
+func (h *Histogram) Max() int64 {
 	if h.count == 0 {
-		return math.NaN()
+		return 0
 	}
 	return h.max
 }
 
 func (h *Histogram) Mean() float64 {
 	if h.count > 0 {
-		return h.sum / float64(h.count)
+		return float64(h.sum) / float64(h.count)
 	}
 	return 0
 }
@@ -138,14 +139,14 @@ func (h *Histogram) Variance() float64 {
 	return h.varianceS / float64(h.count-1)
 }
 
-func (h *Histogram) Percentiles(percentiles []float64) []float64 {
-	scores := make([]float64, len(percentiles))
-	if h.count == 0 {
+func (h *Histogram) Percentiles(percentiles []float64) []int64 {
+	scores := make([]int64, len(percentiles))
+	values := Int64Slice(h.Values())
+	if len(values) == 0 {
 		return scores
 	}
-
-	values := sort.Float64Slice(h.Values())
 	sort.Sort(values)
+
 	for i, p := range percentiles {
 		pos := p * float64(len(values)+1)
 		ipos := int(pos)
@@ -157,14 +158,14 @@ func (h *Histogram) Percentiles(percentiles []float64) []float64 {
 		default:
 			lower := values[ipos-1]
 			upper := values[ipos]
-			scores[i] = lower + (pos-math.Floor(pos))*(upper-lower)
+			scores[i] = lower + int64((pos-math.Floor(pos))*float64(upper-lower))
 		}
 	}
 
 	return scores
 }
 
-func (h *Histogram) Values() []float64 {
+func (h *Histogram) Values() []int64 {
 	h.lock.RLock()
 	samples := h.sample.Values()
 	h.lock.RUnlock()

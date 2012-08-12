@@ -21,7 +21,7 @@ func TestUSampleSizes(t *testing.T) {
 			t.Errorf("Size of sample should be 0 but is %d", sample.Len())
 		}
 		for i := 0; i < data.populationSize; i++ {
-			sample.Update(float64(i))
+			sample.Update(int64(i))
 		}
 		expected_size := minInt(data.reservoirSize, data.populationSize)
 		if sample.Len() != expected_size {
@@ -30,7 +30,7 @@ func TestUSampleSizes(t *testing.T) {
 		// Should only have elements from the population
 		values := sample.Values()
 		for i := 0; i < len(values); i++ {
-			if values[i] < 0 || values[i] >= float64(data.populationSize) {
+			if values[i] < 0 || values[i] >= int64(data.populationSize) {
 				t.Errorf("Sample found that's not from population: %d", values[i])
 			}
 		}
@@ -40,6 +40,6 @@ func TestUSampleSizes(t *testing.T) {
 func BenchmarkUniformSampleUpdate(b *testing.B) {
 	sample := NewUniformSample(1000)
 	for i := 0; i < b.N; i++ {
-		sample.Update(float64(i))
+		sample.Update(int64(i))
 	}
 }

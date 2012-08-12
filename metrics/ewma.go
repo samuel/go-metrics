@@ -2,8 +2,8 @@ package metrics
 
 import (
 	"math"
-	"time"
 	"sync/atomic"
+	"time"
 )
 
 var (

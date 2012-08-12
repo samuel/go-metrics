@@ -16,7 +16,7 @@ const (
 
 type priorityValue struct {
 	priority float64
-	value    float64
+	value    int64
 }
 
 type reservoir struct {
@@ -35,8 +35,8 @@ func (self *reservoir) Get(i int) priorityValue {
 	return self.samples[i]
 }
 
-func (self *reservoir) Values() (values []float64) {
-	values = make([]float64, len(self.samples))
+func (self *reservoir) Values() (values []int64) {
+	values = make([]int64, len(self.samples))
 	for i, sample := range self.samples {
 		values[i] = sample.value
 	}
@@ -116,11 +116,11 @@ func (self *exponentiallyDecayingSample) Len() int {
 	return self.reservoirSize
 }
 
-func (self *exponentiallyDecayingSample) Values() []float64 {
+func (self *exponentiallyDecayingSample) Values() []int64 {
 	return self.values.Values()
 }
 
-func (self *exponentiallyDecayingSample) Update(value float64) {
+func (self *exponentiallyDecayingSample) Update(value int64) {
 	timestamp := time.Now()
 	priority := self.weight(timestamp.Sub(self.startTime)) / rand.Float64()
 	self.count += 1

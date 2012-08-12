@@ -20,8 +20,8 @@ type Collector struct {
 
 var (
 	DefaultCollector       = NewCollector()
-	DefaultPercentiles     = []float64{0.50, 0.75, 0.90, 0.95, 0.99, 0.999, 0.9999, 0.99999}
-	DefaultPercentileNames = []string{"p50", "p75", "p90", "p95", "p99", "p999", "p9999", "p99999"}
+	DefaultPercentiles     = []float64{0.50, 0.75, 0.90, 0.95, 0.99, 0.999, 0.9999}
+	DefaultPercentileNames = []string{"p50", "p75", "p90", "p95", "p99", "p999", "p9999"}
 )
 
 func NewCollector() *Collector {
@@ -100,13 +100,13 @@ func (c *Collector) UnbiasedHistogram(name string) *Histogram {
 
 func (c *Collector) Snapshot() *Snapshot {
 	s := Snapshot{
-		IntValues:   make(map[string]uint64),
+		IntValues:   make(map[string]int64),
 		FloatValues: make(map[string]float64),
 	}
 
 	c.countersLock.RLock()
 	for name, counter := range c.counters {
-		s.IntValues[name+".count"] = counter.Count()
+		s.IntValues[name+".count"] = int64(counter.Count())
 	}
 	c.countersLock.RUnlock()
 
@@ -123,13 +123,13 @@ func (c *Collector) Snapshot() *Snapshot {
 	for name, hist := range c.histograms {
 		perc := hist.Percentiles(DefaultPercentiles)
 		for i, p := range perc {
-			s.FloatValues[name+"."+DefaultPercentileNames[i]] = p
+			s.IntValues[name+"."+DefaultPercentileNames[i]] = p
 		}
 		s.FloatValues[name+".mean"] = hist.Mean()
 		s.FloatValues[name+".stddev"] = hist.StdDev()
-		s.FloatValues[name+".min"] = hist.Min()
-		s.FloatValues[name+".max"] = hist.Max()
-		s.IntValues[name+".count"] = hist.Count()
+		s.IntValues[name+".min"] = hist.Min()
+		s.IntValues[name+".max"] = hist.Max()
+		s.IntValues[name+".count"] = int64(hist.Count())
 	}
 	c.histogramsLock.RUnlock()
 
