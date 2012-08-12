@@ -123,7 +123,7 @@ func (self *exponentiallyDecayingSample) Values() []int64 {
 func (self *exponentiallyDecayingSample) Update(value int64) {
 	timestamp := time.Now()
 	priority := self.weight(timestamp.Sub(self.startTime)) / rand.Float64()
-	self.count += 1
+	self.count++
 	if self.count <= self.reservoirSize {
 		heap.Push(self.values, priorityValue{priority, value})
 	} else {

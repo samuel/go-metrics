@@ -13,7 +13,7 @@ type Collector struct {
 	gaugesLock     sync.Mutex
 	gauges         map[string]GaugeFunc
 	histogramsLock sync.RWMutex
-	histograms     map[string]*Histogram
+	histograms     map[string]Histogram
 	metersLock     sync.RWMutex
 	meters         map[string]*Meter
 }
@@ -73,7 +73,7 @@ func (c *Collector) Counter(name string) *Counter {
 	return counter
 }
 
-func (c *Collector) Histogram(name string, sampleBuilder SampleBuilder) *Histogram {
+func (c *Collector) Histogram(name string, sampleBuilder SampleBuilder) Histogram {
 	c.histogramsLock.RLock()
 	histogram := c.histograms[name]
 	c.histogramsLock.RUnlock()
@@ -82,7 +82,7 @@ func (c *Collector) Histogram(name string, sampleBuilder SampleBuilder) *Histogr
 		// Need to check again to make sure no other go routine got here first
 		histogram = c.histograms[name]
 		if histogram == nil {
-			histogram = NewHistogram(sampleBuilder())
+			histogram = NewSampledHistogram(sampleBuilder())
 			c.histograms[name] = histogram
 		}
 		c.histogramsLock.Unlock()
@@ -90,11 +90,11 @@ func (c *Collector) Histogram(name string, sampleBuilder SampleBuilder) *Histogr
 	return histogram
 }
 
-func (c *Collector) BiasedHistogram(name string) *Histogram {
+func (c *Collector) BiasedHistogram(name string) Histogram {
 	return c.Histogram(name, func() Sample { return NewExponentiallyDecayingSample(1028, 0.015) })
 }
 
-func (c *Collector) UnbiasedHistogram(name string) *Histogram {
+func (c *Collector) UnbiasedHistogram(name string) Histogram {
 	return c.Histogram(name, func() Sample { return NewUniformSample(1028) })
 }
 
