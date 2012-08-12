@@ -22,16 +22,16 @@ type bucketedHistogram struct {
 	lock          sync.RWMutex
 }
 
-// private[this] def makeBucketsFor(error: Double): Array[Int] = {
-//   def build(factor: Double, n: Double): Stream[Double] = {
-//     val next = n * factor
-//     if (next.toInt == Int.MaxValue) Stream.empty else Stream.cons(next, build(factor, next))
-//   }
-
-//   val factor = (1.0 + error) / (1.0 - error)
-//   (Seq(1) ++ build(factor, 1.0).map(_.toInt + 1).distinct.force).toArray
-// }
-
+// Given an error (+/-), compute all the bucket values from 1 until we run out of positive
+// 32-bit ints. The error should be in percent, between 0.0 and 1.0.
+//
+// Each bucket's value will be the midpoint of an error range to the edge of the bucket in each
+// direction, so for example, given a 5% error range (the default), the bucket with value N will
+// cover numbers 5% smaller (0.95*N) and 5% larger (1.05*N).
+//
+// For the usual default of 5%, this results in 200 buckets.
+//
+// The last bucket (the "infinity" bucket) ranges up to Int.MaxValue, which we treat as infinity.
 func MakeBucketsForError(error float64) []int64 {
 	bucketCacheLock.Lock()
 	defer bucketCacheLock.Unlock()
@@ -62,7 +62,9 @@ func MakeBucketsForError(error float64) []int64 {
 	return bucketOffsets
 }
 
-// Implements https://github.com/twitter/ostrich/blob/master/src/main/scala/com/twitter/ostrich/stats/Histogram.scala
+// A histogram that uses a fixed set of buckets for ranges of values.
+// This is an implementation of the Histogram class from Ostrich.
+// https://github.com/twitter/ostrich/blob/master/src/main/scala/com/twitter/ostrich/stats/Histogram.scala
 func NewBucketedHistogram(bucketOffsets []int64) Histogram {
 	return &bucketedHistogram{
 		bucketOffsets: bucketOffsets,
@@ -70,6 +72,7 @@ func NewBucketedHistogram(bucketOffsets []int64) Histogram {
 	}
 }
 
+// Create a bucketed histogram with an error of 5%
 func NewDefaultBucketedHistogram() Histogram {
 	return NewBucketedHistogram(MakeBucketsForError(0.05))
 }

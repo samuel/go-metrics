@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	RESCALE_THRESHOLD = time.Hour
+	edRescaleThreshold = time.Hour
 )
 
 // Reservoir
@@ -106,7 +106,7 @@ func (self *exponentiallyDecayingSample) Clear() {
 	heap.Init(self.values)
 	self.count = 0
 	self.startTime = time.Now()
-	self.nextScaleTime = self.startTime.Add(RESCALE_THRESHOLD)
+	self.nextScaleTime = self.startTime.Add(edRescaleThreshold)
 }
 
 func (self *exponentiallyDecayingSample) Len() int {
