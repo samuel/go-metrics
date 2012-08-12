@@ -163,7 +163,7 @@ landmark L′ (and then use this new L′ at query time). This can be done with
 a linear pass over whatever data structure is being used.
 */
 func (self *exponentiallyDecayingSample) rescale(now time.Time) {
-	self.nextScaleTime = now.Add(RESCALE_THRESHOLD)
+	self.nextScaleTime = now.Add(edRescaleThreshold)
 	oldStartTime := self.startTime
 	self.startTime = now
 	scale := math.Exp(-self.alpha * float64(self.startTime.Sub(oldStartTime)))

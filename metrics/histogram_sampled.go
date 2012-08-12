@@ -141,7 +141,7 @@ func (h *sampledHistogram) Variance() float64 {
 
 func (h *sampledHistogram) Percentiles(percentiles []float64) []int64 {
 	scores := make([]int64, len(percentiles))
-	values := Int64Slice(h.SampleValues())
+	values := int64Slice(h.SampleValues())
 	if len(values) == 0 {
 		return scores
 	}
