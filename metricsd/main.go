@@ -32,8 +32,8 @@ var (
 
 var (
 	mu          sync.Mutex
-	counters    = make(map[string]float64)
-	histograms  = make(map[string]*metrics.Histogram)
+	counters    = make(map[string]int64)
+	histograms  = make(map[string]metrics.Histogram)
 	percentiles = []float64{}
 )
 
@@ -78,7 +78,7 @@ func packetLoop(l net.PacketConn) {
 		}
 		if n > 9 {
 			mtype := buf[0]
-			var value float64
+			var value int64
 			binary.Read(bytes.NewBuffer(buf[1:9]), binary.BigEndian, &value)
 			name := string(buf[9:n])
 
@@ -92,13 +92,13 @@ func packetLoop(l net.PacketConn) {
 	}
 }
 
-func updateCounter(name string, value float64) {
+func updateCounter(name string, value int64) {
 	mu.Lock()
 	defer mu.Unlock()
 	counters[name] += value
 }
 
-func updateHistogram(name string, value float64) {
+func updateHistogram(name string, value int64) {
 	mu.Lock()
 	defer mu.Unlock()
 	hist := histograms[name]
@@ -141,20 +141,20 @@ func reporter() {
 	}
 }
 
-func swapMetrics() (oldcounters map[string]float64, oldhistograms map[string]*metrics.Histogram) {
+func swapMetrics() (oldcounters map[string]int64, oldhistograms map[string]metrics.Histogram) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	oldcounters = counters
 	oldhistograms = histograms
 
-	counters = make(map[string]float64)
-	histograms = make(map[string]*metrics.Histogram)
+	counters = make(map[string]int64)
+	histograms = make(map[string]metrics.Histogram)
 
 	return
 }
 
-func sendMetricsGraphite(ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+func sendMetricsGraphite(ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
 	conn, err := net.Dial("tcp", *f_graphite)
 	if err != nil {
 		return err
@@ -176,23 +176,23 @@ func sendMetricsGraphite(ts time.Time, counters map[string]float64, histograms m
 	return nil
 }
 
-func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
 	metrics := librato.MetricsFormat{}
 	for name, value := range counters {
-		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: value})
+		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: float64(value)})
 	}
 	for name, hist := range histograms {
 		metrics.Gauges = append(metrics.Gauges, librato.Metric{Name: name, Value: hist.Mean()})
 		for i, p := range hist.Percentiles(percentiles) {
 			metrics.Gauges = append(metrics.Gauges,
-				librato.Metric{Name: fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), Value: p})
+				librato.Metric{Name: fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), Value: float64(p)})
 		}
 	}
 
 	return met.SendMetrics(&metrics)
 }
 
-func sendMetricsStatHat(ts time.Time, counters map[string]float64, histograms map[string]*metrics.Histogram) error {
+func sendMetricsStatHat(ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
 	for name, value := range counters {
 		if err := stathat.PostEZCount(name, *f_stathat, int(value)); err != nil {
 			return err
@@ -203,7 +203,7 @@ func sendMetricsStatHat(ts time.Time, counters map[string]float64, histograms ma
 			return err
 		}
 		for i, p := range hist.Percentiles(percentiles) {
-			if err := stathat.PostEZValue(fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), *f_stathat, p); err != nil {
+			if err := stathat.PostEZValue(fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), *f_stathat, float64(p)); err != nil {
 				return err
 			}
 		}
