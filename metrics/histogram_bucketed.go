@@ -23,7 +23,7 @@ type bucketedHistogram struct {
 }
 
 // Given an error (+/-), compute all the bucket values from 1 until we run out of positive
-// 32-bit ints. The error should be in percent, between 0.0 and 1.0.
+// 64-bit ints. The error should be in percent, between 0.0 and 1.0.
 //
 // Each bucket's value will be the midpoint of an error range to the edge of the bucket in each
 // direction, so for example, given a 5% error range (the default), the bucket with value N will
@@ -31,7 +31,7 @@ type bucketedHistogram struct {
 //
 // For the usual default of 5%, this results in 200 buckets.
 //
-// The last bucket (the "infinity" bucket) ranges up to Int.MaxValue, which we treat as infinity.
+// The last bucket (the "infinity" bucket) ranges up to math.MaxInt64, which we treat as infinity.
 func MakeBucketsForError(error float64) []int64 {
 	bucketCacheLock.Lock()
 	defer bucketCacheLock.Unlock()
