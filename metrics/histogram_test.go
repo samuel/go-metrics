@@ -17,3 +17,25 @@ func benchmarkHistogramPercentiles(b *testing.B, h Histogram) {
 		h.Percentiles(perc)
 	}
 }
+
+func benchmarkHistogramConcurrentUpdate(b *testing.B, h Histogram) {
+	concurrency := 100
+	items := b.N / concurrency
+	if items < 1 {
+		items = 1
+	}
+	count := 0
+	doneCh := make(chan bool)
+	for i := 0; i < b.N; i += items {
+		go func(start int) {
+			for j := start; j < start+items && j < b.N; j++ {
+				h.Update(int64(j))
+			}
+			doneCh <- true
+		}(i)
+		count++
+	}
+	for i := 0; i < count; i++ {
+		_ = <-doneCh
+	}
+}

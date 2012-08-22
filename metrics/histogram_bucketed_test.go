@@ -122,3 +122,7 @@ func BenchmarkBucketedHistogramUpdate(b *testing.B) {
 func BenchmarkBucketedHistogramPercentiles(b *testing.B) {
 	benchmarkHistogramPercentiles(b, NewDefaultBucketedHistogram())
 }
+
+func BenchmarkBucketedHistogramConcurrentUpdate(b *testing.B) {
+	benchmarkHistogramConcurrentUpdate(b, NewDefaultBucketedHistogram())
+}

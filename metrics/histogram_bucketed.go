@@ -110,8 +110,8 @@ func (h *bucketedHistogram) Clear() {
 }
 
 func (h *bucketedHistogram) Update(value int64) {
-	h.lock.Lock()
 	bucketIndex := h.bucketIndex(value)
+	h.lock.Lock()
 	h.bucketCounts[bucketIndex]++
 	h.count++
 	h.sum += value
