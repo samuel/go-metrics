@@ -195,7 +195,11 @@ func (h *bucketedHistogram) Percentiles(percentiles []float64) []int64 {
 			} else if index-1 >= len(h.bucketOffsets) {
 				scores[i] = math.MaxInt64
 			} else {
-				scores[i] = (h.bucketOffsets[index-2] + h.bucketOffsets[index-1] - 1) >> 1
+				// Avoid overflow calculating (h.bucketOffsets[index-2] + h.bucketOffsets[index-1] - 1) >> 1
+				o1 := h.bucketOffsets[index-2]
+				o2 := h.bucketOffsets[index-1]
+				bit := ((o1 & 1) | (o1 & 1)) ^ 1
+				scores[i] = (o1 >> 1) + (o2 >> 1) - bit
 			}
 		}
 	}
