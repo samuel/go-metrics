@@ -15,9 +15,6 @@ func TestSampledHistogramEmpty(t *testing.T) {
 	if histogram.Mean() != 0 {
 		t.Errorf("Mean for empty histogram should be 0 not %.2f", histogram.Mean())
 	}
-	if histogram.StdDev() != 0 {
-		t.Errorf("StdDev for empty histogram should be 0 not %.2f", histogram.StdDev())
-	}
 	perc := histogram.Percentiles([]float64{0.5, 0.75, 0.99})
 	if len(perc) != 3 {
 		t.Errorf("Percentiles expected to return slice of len 3 not %d", len(perc))
@@ -46,9 +43,6 @@ func TestSampledHistogram1to10000(t *testing.T) {
 	}
 	if histogram.Mean() != 5000.5 {
 		t.Errorf("Mean for histogram should be 5000.5 not %.2f", histogram.Mean())
-	}
-	if !almostEqual(histogram.StdDev(), 2886.896, 0.001) {
-		t.Errorf("StdDev for histogram should be 2886.896 not %.3f", histogram.StdDev())
 	}
 	perc := histogram.Percentiles([]float64{0.5, 0.75, 0.99})
 	if len(perc) != 3 {

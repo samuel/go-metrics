@@ -3,6 +3,7 @@ package metrics
 import (
 	"math"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -17,8 +18,6 @@ type bucketedHistogram struct {
 	max           int64
 	sum           int64
 	count         uint64
-	varianceM     float64
-	varianceS     float64
 	lock          sync.RWMutex
 }
 
@@ -69,6 +68,8 @@ func NewBucketedHistogram(bucketOffsets []int64) Histogram {
 	return &bucketedHistogram{
 		bucketOffsets: bucketOffsets,
 		bucketCounts:  make([]uint64, len(bucketOffsets)+1),
+		min:           math.MaxInt64,
+		max:           math.MinInt64,
 	}
 }
 
@@ -96,84 +97,56 @@ func (h *bucketedHistogram) bucketIndex(key int64) int {
 }
 
 func (h *bucketedHistogram) Clear() {
-	h.lock.Lock()
-	h.min = 0
-	h.max = 0
-	h.sum = 0
-	h.count = 0
-	h.varianceM = 0
-	h.varianceS = 0
+	atomic.StoreUint64(&h.count, 0)
+	atomic.StoreInt64(&h.sum, 0)
+	atomic.StoreInt64(&h.min, math.MaxInt64)
+	atomic.StoreInt64(&h.max, math.MinInt64)
 	for i := 0; i < len(h.bucketCounts); i++ {
-		h.bucketCounts[i] = 0
+		atomic.StoreUint64(&h.bucketCounts[i], 0)
 	}
-	h.lock.Unlock()
 }
 
 func (h *bucketedHistogram) Update(value int64) {
 	bucketIndex := h.bucketIndex(value)
-	h.lock.Lock()
-	h.bucketCounts[bucketIndex]++
-	h.count++
-	h.sum += value
-	if h.count == 1 {
-		h.min = value
-		h.max = value
-	} else {
-		if value < h.min {
-			h.min = value
+	atomic.AddUint64(&h.bucketCounts[bucketIndex], 1)
+	atomic.AddUint64(&h.count, 1)
+	atomic.AddInt64(&h.sum, value)
+	for {
+		min := atomic.LoadInt64(&h.min)
+		if value > min || atomic.CompareAndSwapInt64(&h.min, min, value) {
+			break
 		}
-		if value > h.max {
-			h.max = value
-		}
-		floatValue := float64(value)
-		oldM := h.varianceM
-		h.varianceM = oldM + ((floatValue - oldM) / float64(h.count))
-		h.varianceS += (floatValue - oldM) * (floatValue - h.varianceM)
 	}
-	h.lock.Unlock()
+	for {
+		max := atomic.LoadInt64(&h.max)
+		if value < max || atomic.CompareAndSwapInt64(&h.max, max, value) {
+			break
+		}
+	}
 }
 
 func (h *bucketedHistogram) Count() uint64 {
-	return h.count
+	return atomic.LoadUint64(&h.count)
 }
 
 func (h *bucketedHistogram) Sum() int64 {
-	return h.sum
+	return atomic.LoadInt64(&h.sum)
 }
 
 func (h *bucketedHistogram) Min() int64 {
-	if h.count == 0 {
-		return 0
-	}
-	return h.min
+	return atomic.LoadInt64(&h.min)
 }
 
 func (h *bucketedHistogram) Max() int64 {
-	if h.count == 0 {
-		return 0
-	}
-	return h.max
+	return atomic.LoadInt64(&h.max)
 }
 
 func (h *bucketedHistogram) Mean() float64 {
-	if h.count > 0 {
-		return float64(h.sum) / float64(h.count)
+	count := h.Count()
+	if count > 0 {
+		return float64(h.Sum()) / float64(count)
 	}
 	return 0
-}
-
-func (h *bucketedHistogram) StdDev() float64 {
-	if h.count > 0 {
-		return math.Sqrt(h.varianceS / float64(h.count-1))
-	}
-	return 0
-}
-
-func (h *bucketedHistogram) Variance() float64 {
-	if h.count <= 1 {
-		return 0
-	}
-	return h.varianceS / float64(h.count-1)
 }
 
 func (h *bucketedHistogram) Percentiles(percentiles []float64) []int64 {
@@ -183,11 +156,15 @@ func (h *bucketedHistogram) Percentiles(percentiles []float64) []int64 {
 	index := 0
 	for i, p := range percentiles {
 		if p == 0.0 {
-			scores[i] = h.min
+			if h.Count() == 0 {
+				scores[i] = 0
+			} else {
+				scores[i] = h.Min()
+			}
 		} else {
-			target := p * float64(h.count)
+			target := p * float64(h.Count())
 			for float64(total) < target {
-				total += h.bucketCounts[index]
+				total += atomic.LoadUint64(&h.bucketCounts[index])
 				index++
 			}
 			if index <= 1 {

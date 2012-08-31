@@ -126,7 +126,6 @@ func (c *Collector) Snapshot() *Snapshot {
 			s.IntValues[name+"."+DefaultPercentileNames[i]] = p
 		}
 		s.FloatValues[name+".mean"] = hist.Mean()
-		s.FloatValues[name+".stddev"] = hist.StdDev()
 		s.IntValues[name+".min"] = hist.Min()
 		s.IntValues[name+".max"] = hist.Max()
 		s.IntValues[name+".count"] = int64(hist.Count())

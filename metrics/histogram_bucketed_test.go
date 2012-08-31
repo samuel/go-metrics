@@ -63,7 +63,7 @@ func TestBucketedHistogramPercentiles(t *testing.T) {
 	p := h.Percentiles([]float64{0.0, 0.1, 0.5, 0.9, 1.0})
 	for _, v := range p {
 		if v != 0 {
-			t.Fatalf("Expected empty histogram to return 0 for all percentiles")
+			t.Fatalf("Expected empty histogram to return 0 for all percentiles instead of %d", v)
 		}
 	}
 

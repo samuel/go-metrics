@@ -15,25 +15,16 @@ type Sample interface {
 }
 
 type sampledHistogram struct {
-	sample    Sample
-	min       int64
-	max       int64
-	sum       int64
-	count     uint64
-	varianceM float64
-	varianceS float64
-	lock      sync.RWMutex
+	sample Sample
+	min    int64
+	max    int64
+	sum    int64
+	count  uint64
+	lock   sync.RWMutex
 }
 
 func NewSampledHistogram(sample Sample) Histogram {
-	return &sampledHistogram{
-		sample:    sample,
-		min:       0,
-		max:       0,
-		sum:       0,
-		count:     0,
-		varianceM: 0,
-		varianceS: 0}
+	return &sampledHistogram{sample: sample}
 }
 
 /*
@@ -67,8 +58,6 @@ func (h *sampledHistogram) Clear() {
 	h.max = 0
 	h.sum = 0
 	h.count = 0
-	h.varianceM = 0
-	h.varianceS = 0
 	h.lock.Unlock()
 }
 
@@ -80,7 +69,6 @@ func (h *sampledHistogram) Update(value int64) {
 	if h.count == 1 {
 		h.min = value
 		h.max = value
-		h.varianceM = float64(value)
 	} else {
 		if value < h.min {
 			h.min = value
@@ -88,10 +76,6 @@ func (h *sampledHistogram) Update(value int64) {
 		if value > h.max {
 			h.max = value
 		}
-		floatValue := float64(value)
-		oldM := h.varianceM
-		h.varianceM = oldM + ((floatValue - oldM) / float64(h.count))
-		h.varianceS += (floatValue - oldM) * (floatValue - h.varianceM)
 	}
 	h.lock.Unlock()
 }
@@ -123,20 +107,6 @@ func (h *sampledHistogram) Mean() float64 {
 		return float64(h.sum) / float64(h.count)
 	}
 	return 0
-}
-
-func (h *sampledHistogram) StdDev() float64 {
-	if h.count > 0 {
-		return math.Sqrt(h.varianceS / float64(h.count-1))
-	}
-	return 0
-}
-
-func (h *sampledHistogram) Variance() float64 {
-	if h.count <= 1 {
-		return 0
-	}
-	return h.varianceS / float64(h.count-1)
 }
 
 func (h *sampledHistogram) Percentiles(percentiles []float64) []int64 {

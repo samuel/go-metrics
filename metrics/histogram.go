@@ -8,7 +8,5 @@ type Histogram interface {
 	Min() int64
 	Max() int64
 	Mean() float64
-	StdDev() float64
-	Variance() float64
 	Percentiles([]float64) []int64
 }
