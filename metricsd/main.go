@@ -31,10 +31,11 @@ var (
 )
 
 var (
-	mu          sync.Mutex
-	counters    = make(map[string]int64)
-	histograms  = make(map[string]metrics.Histogram)
-	percentiles = []float64{}
+	mu              sync.Mutex
+	counters        = make(map[string]int64)
+	histograms      = make(map[string]metrics.Histogram)
+	percentiles     = []float64{}
+	percentileNames = []string{}
 )
 
 func main() {
@@ -57,6 +58,7 @@ func parseFlags() {
 			log.Fatalf("Invalid percentile: %f", p)
 		}
 		percentiles = append(percentiles, p)
+		percentileNames = append(percentileNames, strings.Replace(s, "0.", "p", 1))
 	}
 }
 
@@ -167,7 +169,7 @@ func sendMetricsGraphite(ts time.Time, counters map[string]int64, histograms map
 	}
 	for name, hist := range histograms {
 		for i, p := range hist.Percentiles(percentiles) {
-			if _, err := fmt.Fprintf(conn, "%s:%.2f %f %d\n", name, percentiles[i]*100, p, ts.Unix()); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s.%s %f %d\n", name, percentileNames[i], p, ts.Unix()); err != nil {
 				return err
 			}
 		}
@@ -185,7 +187,7 @@ func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]
 		metrics.Gauges = append(metrics.Gauges, librato.Metric{Name: name, Value: hist.Mean()})
 		for i, p := range hist.Percentiles(percentiles) {
 			metrics.Gauges = append(metrics.Gauges,
-				librato.Metric{Name: fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), Value: float64(p)})
+				librato.Metric{Name: fmt.Sprintf("%s.%s", name, percentileNames[i]), Value: float64(p)})
 		}
 	}
 
@@ -203,7 +205,7 @@ func sendMetricsStatHat(ts time.Time, counters map[string]int64, histograms map[
 			return err
 		}
 		for i, p := range hist.Percentiles(percentiles) {
-			if err := stathat.PostEZValue(fmt.Sprintf("%s:%.2f", name, percentiles[i]*100), *f_stathat, float64(p)); err != nil {
+			if err := stathat.PostEZValue(fmt.Sprintf("%s.%s", name, percentileNames[i]), *f_stathat, float64(p)); err != nil {
 				return err
 			}
 		}
