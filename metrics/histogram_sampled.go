@@ -81,14 +81,20 @@ func (h *sampledHistogram) Update(value int64) {
 }
 
 func (h *sampledHistogram) Count() uint64 {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	return h.count
 }
 
 func (h *sampledHistogram) Sum() int64 {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	return h.sum
 }
 
 func (h *sampledHistogram) Min() int64 {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	if h.count == 0 {
 		return 0
 	}
@@ -96,6 +102,8 @@ func (h *sampledHistogram) Min() int64 {
 }
 
 func (h *sampledHistogram) Max() int64 {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	if h.count == 0 {
 		return 0
 	}
@@ -103,6 +111,8 @@ func (h *sampledHistogram) Max() int64 {
 }
 
 func (h *sampledHistogram) Mean() float64 {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	if h.count > 0 {
 		return float64(h.sum) / float64(h.count)
 	}
