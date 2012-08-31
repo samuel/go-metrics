@@ -163,13 +163,13 @@ func sendMetricsGraphite(ts time.Time, counters map[string]int64, histograms map
 	}
 	defer conn.Close()
 	for name, value := range counters {
-		if _, err := fmt.Fprintf(conn, "%s %f %d\n", name, value, ts.Unix()); err != nil {
+		if _, err := fmt.Fprintf(conn, "%s %d %d\n", name, value, ts.Unix()); err != nil {
 			return err
 		}
 	}
 	for name, hist := range histograms {
 		for i, p := range hist.Percentiles(percentiles) {
-			if _, err := fmt.Fprintf(conn, "%s.%s %f %d\n", name, percentileNames[i], p, ts.Unix()); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s.%s %d %d\n", name, percentileNames[i], p, ts.Unix()); err != nil {
 				return err
 			}
 		}
