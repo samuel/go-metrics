@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"math"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -38,12 +39,17 @@ func NewEWMA(interval time.Duration, alpha float64) *EWMA {
 	return ewma
 }
 
-// Increment the uncounted value - thread safe
+func (ewma *EWMA) String() string {
+	rate := ewma.Rate()
+	return strconv.FormatFloat(rate, 'g', -1, 64)
+}
+
+// Increment the uncounted value
 func (ewma *EWMA) Update(value uint64) {
 	atomic.AddUint64(&ewma.uncounted, value)
 }
 
-// Return the rate - thread safe
+// Return the rate
 func (ewma *EWMA) Rate() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&ewma.rate))
 }

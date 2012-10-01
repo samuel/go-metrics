@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -26,6 +27,11 @@ func NewMeter() *Meter {
 	}
 	go m.tickWatcher()
 	return &m
+}
+
+func (m *Meter) String() string {
+	return fmt.Sprintf("{\"1\": %s, \"5\": %s, \"15\": %s}",
+		m.m1Rate.String(), m.m5Rate.String(), m.m15Rate.String())
 }
 
 func (m *Meter) tickWatcher() {
