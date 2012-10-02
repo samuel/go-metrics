@@ -5,24 +5,26 @@ import (
 	"sync/atomic"
 )
 
-type Counter struct {
-	count int64
-}
+type Counter int64
 
-func NewCounter() *Counter {
-	return &Counter{}
+func NewCounter() Counter {
+	return 0
 }
 
 func (c *Counter) Inc(delta int64) {
-	atomic.AddInt64(&c.count, delta)
+	atomic.AddInt64((*int64)(c), delta)
 }
 
 func (c *Counter) Dec(delta int64) {
-	atomic.AddInt64(&c.count, -delta)
+	atomic.AddInt64((*int64)(c), -delta)
+}
+
+func (c *Counter) Set(value int64) {
+	atomic.StoreInt64((*int64)(c), value)
 }
 
 func (c *Counter) Count() int64 {
-	return atomic.LoadInt64(&c.count)
+	return atomic.LoadInt64((*int64)(c))
 }
 
 func (c *Counter) String() string {
