@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"expvar"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +25,7 @@ const (
 )
 
 var (
+	f_httpaddr = flag.String("h", "0.0.0.0:5251", "address of HTTP server")
 	f_laddr    = flag.String("l", "0.0.0.0:5252", "the address to listen on")
 	f_perc     = flag.String("p", "0.90,0.99,0.999", "comma separated list of percentiles to record")
 	f_graphite = flag.String("g", "", "host:port for Graphite's Carbon")
@@ -36,10 +40,35 @@ var (
 	histograms      = make(map[string]metrics.Histogram)
 	percentiles     = []float64{}
 	percentileNames = []string{}
+
+	statRequestCount    = metrics.NewCounter()
+	statRequestRate     = metrics.NewMeter()
+	statGraphiteLatency = metrics.NewBiasedHistogram()
+	statLibratoLatency  = metrics.NewBiasedHistogram()
+	statStatHatLatency  = metrics.NewBiasedHistogram()
 )
+
+func init() {
+	m := expvar.NewMap("metricsd")
+	m.Set("requests", statRequestCount)
+	m.Set("requests_per_sec", statRequestRate)
+	m.Set("graphite_latency_us", &metrics.HistogramExport{statGraphiteLatency,
+		[]float64{0.5, 0.9, 0.99, 0.999}, []string{"p50", "p90", "p99", "p999"}})
+	m.Set("librato_latency_us", &metrics.HistogramExport{statLibratoLatency,
+		[]float64{0.5, 0.9, 0.99, 0.999}, []string{"p50", "p90", "p99", "p999"}})
+	m.Set("stathat_latency_us", &metrics.HistogramExport{statStatHatLatency,
+		[]float64{0.5, 0.9, 0.99, 0.999}, []string{"p50", "p90", "p99", "p999"}})
+}
 
 func main() {
 	parseFlags()
+
+	if *f_httpaddr != "" {
+		go func() {
+			log.Fatal(http.ListenAndServe(*f_httpaddr, nil))
+		}()
+	}
+
 	go reporter()
 	packetLoop(listen())
 }
@@ -75,6 +104,8 @@ func packetLoop(l net.PacketConn) {
 	buf := make([]byte, 4096)
 	for {
 		n, _, err := l.ReadFrom(buf)
+		statRequestCount.Inc(1)
+		statRequestRate.Update(1)
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -123,21 +154,27 @@ func reporter() {
 
 		if len(counters) > 0 || len(histograms) > 0 {
 			if *f_graphite != "" {
+				startTime := time.Now()
 				if err := sendMetricsGraphite(ts, counters, histograms); err != nil {
 					log.Printf(err.Error())
 				}
+				statGraphiteLatency.Update(time.Now().Sub(startTime).Nanoseconds() / 1e3)
 			}
 
 			if met != nil {
+				startTime := time.Now()
 				if err := sendMetricsLibrato(met, ts, counters, histograms); err != nil {
 					log.Printf(err.Error())
 				}
+				statLibratoLatency.Update(time.Now().Sub(startTime).Nanoseconds() / 1e3)
 			}
 
 			if *f_stathat != "" {
+				startTime := time.Now()
 				if err := sendMetricsStatHat(ts, counters, histograms); err != nil {
 					log.Printf(err.Error())
 				}
+				statStatHatLatency.Update(time.Now().Sub(startTime).Nanoseconds() / 1e3)
 			}
 		}
 	}

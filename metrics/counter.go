@@ -7,8 +7,9 @@ import (
 
 type Counter int64
 
-func NewCounter() Counter {
-	return 0
+func NewCounter() *Counter {
+	c := Counter(int64(0))
+	return &c
 }
 
 func (c *Counter) Inc(delta int64) {
@@ -27,6 +28,6 @@ func (c *Counter) Count() int64 {
 	return atomic.LoadInt64((*int64)(c))
 }
 
-func (c Counter) String() string {
+func (c *Counter) String() string {
 	return strconv.FormatInt(c.Count(), 10)
 }
