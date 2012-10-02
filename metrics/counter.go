@@ -27,6 +27,6 @@ func (c *Counter) Count() int64 {
 	return atomic.LoadInt64((*int64)(c))
 }
 
-func (c *Counter) String() string {
+func (c Counter) String() string {
 	return strconv.FormatInt(c.Count(), 10)
 }
