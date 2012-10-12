@@ -140,7 +140,7 @@ func (self *exponentiallyDecayingSample) Update(value int64) {
 }
 
 func (self *exponentiallyDecayingSample) weight(delta time.Duration) float64 {
-	return math.Exp(self.alpha * float64(delta))
+	return math.Exp(self.alpha * delta.Seconds())
 }
 
 /*
@@ -166,6 +166,6 @@ func (self *exponentiallyDecayingSample) rescale(now time.Time) {
 	self.nextScaleTime = now.Add(edRescaleThreshold)
 	oldStartTime := self.startTime
 	self.startTime = now
-	scale := math.Exp(-self.alpha * float64(self.startTime.Sub(oldStartTime)))
+	scale := math.Exp(-self.alpha * self.startTime.Sub(oldStartTime).Seconds())
 	self.values.ScalePriority(scale)
 }
