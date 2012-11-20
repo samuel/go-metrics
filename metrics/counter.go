@@ -10,6 +10,7 @@ type Counter interface {
 	Dec(delta int64)
 	Set(delta int64)
 	Count() int64
+	String() string
 }
 
 type atomicCounter int64
