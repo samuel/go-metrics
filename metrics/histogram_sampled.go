@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -44,11 +43,6 @@ func NewBiasedHistogram() Histogram {
 */
 func NewUnbiasedHistogram() Histogram {
 	return NewSampledHistogram(NewUniformSample(1028))
-}
-
-func (h *sampledHistogram) String() string {
-	return fmt.Sprintf("sampledHistogram{sum:%.4f count:%d min:%.4f max:%.4f}",
-		h.sum, h.count, h.min, h.max)
 }
 
 func (h *sampledHistogram) Clear() {
@@ -150,4 +144,8 @@ func (h *sampledHistogram) SampleValues() []int64 {
 	samples := h.sample.Values()
 	h.lock.RUnlock()
 	return samples
+}
+
+func (h *sampledHistogram) String() string {
+	return histogramToJson(h, defaultPercentiles, defaultPrecentileNames)
 }

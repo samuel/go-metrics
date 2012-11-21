@@ -183,3 +183,7 @@ func (h *bucketedHistogram) Percentiles(percentiles []float64) []int64 {
 
 	return scores
 }
+
+func (h *bucketedHistogram) String() string {
+	return histogramToJson(h, defaultPercentiles, defaultPrecentileNames)
+}
