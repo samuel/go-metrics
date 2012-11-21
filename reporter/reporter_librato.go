@@ -50,28 +50,39 @@ func (r *LibratoReporter) Start() {
 					case metrics.Counter:
 						mets.Counters = append(mets.Counters,
 							librato.Metric{
-								// Source: r.source,
 								Name:  name,
 								Value: float64(m.Count()),
+							})
+					case *metrics.EWMA:
+						mets.Gauges = append(mets.Gauges,
+							librato.Metric{
+								Name:  name,
+								Value: m.Rate(),
+							})
+					case *metrics.Meter:
+						mets.Gauges = append(mets.Gauges,
+							librato.Metric{
+								Name:  name + "/1m",
+								Value: m.OneMinuteRate(),
+							},
+							librato.Metric{
+								Name:  name + "/5m",
+								Value: m.FiveMinuteRate(),
+							},
+							librato.Metric{
+								Name:  name + "/15m",
+								Value: m.FifteenMinuteRate(),
 							})
 					case metrics.Histogram:
 						count := m.Count()
 						if count > 0 {
 							mets.Gauges = append(mets.Gauges,
 								librato.Gauge{
-									// Source: r.source,
 									Name:  name,
 									Count: count,
 									Sum:   float64(m.Sum()),
 									Min:   float64(m.Min()),
 									Max:   float64(m.Max()),
-								})
-						} else {
-							mets.Gauges = append(mets.Gauges,
-								librato.Metric{
-									// Source: r.source,
-									Name:  name,
-									Value: 0,
 								})
 						}
 					}
