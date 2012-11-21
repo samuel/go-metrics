@@ -10,20 +10,36 @@ import (
 )
 
 type LibratoReporter struct {
-	source    string
-	registry  *metrics.Registry
-	interval  time.Duration
-	ticker    *time.Ticker
-	closeChan chan bool
-	lib       *librato.Metrics
+	source          string
+	registry        *metrics.Registry
+	interval        time.Duration
+	ticker          *time.Ticker
+	closeChan       chan bool
+	lib             *librato.Metrics
+	percentiles     []float64
+	percentileNames []string
 }
 
-func NewLibratoReporter(registry *metrics.Registry, interval time.Duration, username, token, source string) *LibratoReporter {
+func NewLibratoReporter(registry *metrics.Registry, interval time.Duration, username, token, source string, percentiles map[string]float64) *LibratoReporter {
+	per := metrics.DefaultPercentiles
+	perNames := metrics.DefaultPercentileNames
+
+	if percentiles != nil {
+		per = make([]float64, 0)
+		perNames = make([]string, 0)
+		for name, p := range percentiles {
+			per = append(per, p)
+			perNames = append(perNames, name)
+		}
+	}
+
 	return &LibratoReporter{
-		source:   source,
-		lib:      &librato.Metrics{username, token},
-		registry: registry,
-		interval: interval,
+		source:          source,
+		lib:             &librato.Metrics{username, token},
+		registry:        registry,
+		interval:        interval,
+		percentiles:     per,
+		percentileNames: perNames,
 	}
 }
 
@@ -84,11 +100,11 @@ func (r *LibratoReporter) Start() {
 									Min:   float64(m.Min()),
 									Max:   float64(m.Max()),
 								})
-							percentiles := m.Percentiles(metrics.DefaultPercentiles)
+							percentiles := m.Percentiles(r.percentiles)
 							for i, perc := range percentiles {
 								mets.Gauges = append(mets.Gauges,
 									librato.Metric{
-										Name:  name + "." + metrics.DefaultPercentileNames[i],
+										Name:  name + "." + r.percentileNames[i],
 										Value: float64(perc),
 									})
 							}
