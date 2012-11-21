@@ -84,6 +84,14 @@ func (r *LibratoReporter) Start() {
 									Min:   float64(m.Min()),
 									Max:   float64(m.Max()),
 								})
+							percentiles := m.Percentiles(metrics.DefaultPercentiles)
+							for i, perc := range percentiles {
+								mets.Gauges = append(mets.Gauges,
+									librato.Metric{
+										Name:  name + "." + metrics.DefaultPercentileNames[i],
+										Value: float64(perc),
+									})
+							}
 						}
 					}
 					return nil

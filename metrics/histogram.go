@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	defaultPercentiles     = []float64{0.5, 0.75, 0.9, 0.99, 0.999, 0.9999}
-	defaultPrecentileNames = []string{"median", "p75", "p90", "p99", "p999", "p9999"}
+	DefaultPercentiles     = []float64{0.5, 0.75, 0.9, 0.99, 0.999, 0.9999}
+	DefaultPercentileNames = []string{"median", "p75", "p90", "p99", "p999", "p9999"}
 )
 
 type Histogram interface {

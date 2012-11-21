@@ -147,5 +147,5 @@ func (h *sampledHistogram) SampleValues() []int64 {
 }
 
 func (h *sampledHistogram) String() string {
-	return histogramToJson(h, defaultPercentiles, defaultPrecentileNames)
+	return histogramToJson(h, DefaultPercentiles, DefaultPercentileNames)
 }
