@@ -62,15 +62,15 @@ func (r *LibratoReporter) Start() {
 					case *metrics.Meter:
 						mets.Gauges = append(mets.Gauges,
 							librato.Metric{
-								Name:  name + "/1m",
+								Name:  name + ".1m",
 								Value: m.OneMinuteRate(),
 							},
 							librato.Metric{
-								Name:  name + "/5m",
+								Name:  name + ".5m",
 								Value: m.FiveMinuteRate(),
 							},
 							librato.Metric{
-								Name:  name + "/15m",
+								Name:  name + ".15m",
 								Value: m.FifteenMinuteRate(),
 							})
 					case metrics.Histogram:
