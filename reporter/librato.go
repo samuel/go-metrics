@@ -14,6 +14,7 @@ type libratoReporter struct {
 	lib             *librato.Metrics
 	percentiles     []float64
 	percentileNames []string
+	counterCache    *counterDeltaCache
 }
 
 func NewLibratoReporter(registry *metrics.Registry, interval time.Duration, username, token, source string, percentiles map[string]float64) *PeriodicReporter {
@@ -34,6 +35,7 @@ func NewLibratoReporter(registry *metrics.Registry, interval time.Duration, user
 		lib:             &librato.Metrics{username, token},
 		percentiles:     per,
 		percentileNames: perNames,
+		counterCache:    &counterDeltaCache{},
 	}
 	return NewPeriodicReporter(registry, interval, true, lr)
 }
@@ -87,14 +89,16 @@ func (r *libratoReporter) Report(registry *metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				mets.Gauges = append(mets.Gauges,
-					librato.Gauge{
-						Name:  name,
-						Count: count,
-						Sum:   float64(m.Sum()),
-						Min:   float64(m.Min()),
-						Max:   float64(m.Max()),
-					})
+				deltaCount := r.counterCache.delta(name+".count", int64(count))
+				if deltaCount > 0 {
+					deltaSum := r.counterCache.delta(name+".sum", m.Sum())
+					mets.Gauges = append(mets.Gauges,
+						librato.Gauge{
+							Name:  name,
+							Count: uint64(deltaCount),
+							Sum:   float64(deltaSum),
+						})
+				}
 				percentiles := m.Percentiles(r.percentiles)
 				for i, perc := range percentiles {
 					mets.Gauges = append(mets.Gauges,

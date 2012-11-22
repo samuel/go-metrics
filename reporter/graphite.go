@@ -11,11 +11,11 @@ import (
 )
 
 type graphiteReporter struct {
-	addr             string
-	source           string
-	percentiles      []float64
-	percentileNames  []string
-	previousCounters map[string]int64 // TODO: These should expire if counters aren't seen again
+	addr            string
+	source          string
+	percentiles     []float64
+	percentileNames []string
+	counterCache    *counterDeltaCache
 }
 
 func NewGraphiteReporter(registry *metrics.Registry, interval time.Duration, addr, source string, percentiles map[string]float64) *PeriodicReporter {
@@ -32,11 +32,11 @@ func NewGraphiteReporter(registry *metrics.Registry, interval time.Duration, add
 	}
 
 	gr := &graphiteReporter{
-		addr:             addr,
-		source:           source,
-		percentiles:      per,
-		percentileNames:  perNames,
-		previousCounters: make(map[string]int64),
+		addr:            addr,
+		source:          source,
+		percentiles:     per,
+		percentileNames: perNames,
+		counterCache:    &counterDeltaCache{},
 	}
 	return NewPeriodicReporter(registry, interval, false, gr)
 }
@@ -62,10 +62,7 @@ func (r *graphiteReporter) Report(registry *metrics.Registry) {
 		name = strings.Replace(name, "/", ".", -1)
 		switch m := metric.(type) {
 		case metrics.CounterValue:
-			count := int64(m)
-			prev := r.previousCounters[name]
-			r.previousCounters[name] = count
-			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), count-prev, ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), r.counterCache.delta(name, int64(m)), ts); err != nil {
 				return err
 			}
 		case metrics.GaugeValue:
@@ -73,10 +70,7 @@ func (r *graphiteReporter) Report(registry *metrics.Registry) {
 				return err
 			}
 		case metrics.Counter:
-			count := m.Count()
-			prev := r.previousCounters[name]
-			r.previousCounters[name] = count
-			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), count-prev, ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), r.counterCache.delta(name, m.Count()), ts); err != nil {
 				return err
 			}
 		case *metrics.EWMA:
@@ -96,8 +90,12 @@ func (r *graphiteReporter) Report(registry *metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".mean"), m.Mean(), ts); err != nil {
-					return err
+				deltaCount := r.counterCache.delta(name+".count", int64(count))
+				if deltaCount > 0 {
+					deltaSum := r.counterCache.delta(name+".sum", m.Sum())
+					if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".mean"), float64(deltaSum)/float64(deltaCount), ts); err != nil {
+						return err
+					}
 				}
 				percentiles := m.Percentiles(r.percentiles)
 				for i, perc := range percentiles {

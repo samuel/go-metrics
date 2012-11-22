@@ -10,11 +10,11 @@ import (
 )
 
 type statHatReporter struct {
-	source           string
-	email            string
-	percentiles      []float64
-	percentileNames  []string
-	previousCounters map[string]int // TODO: These should expire if counters aren't seen again
+	source          string
+	email           string
+	percentiles     []float64
+	percentileNames []string
+	counterCache    *counterDeltaCache
 }
 
 func NewStatHatReporter(registry *metrics.Registry, interval time.Duration, email, source string, percentiles map[string]float64) *PeriodicReporter {
@@ -31,11 +31,11 @@ func NewStatHatReporter(registry *metrics.Registry, interval time.Duration, emai
 	}
 
 	sr := &statHatReporter{
-		source:           source,
-		email:            email,
-		percentiles:      per,
-		percentileNames:  perNames,
-		previousCounters: make(map[string]int),
+		source:          source,
+		email:           email,
+		percentiles:     per,
+		percentileNames: perNames,
+		counterCache:    &counterDeltaCache{},
 	}
 	return NewPeriodicReporter(registry, interval, false, sr)
 }
@@ -45,10 +45,7 @@ func (r *statHatReporter) Report(registry *metrics.Registry) {
 		name = strings.Replace(name, "/", ".", -1)
 		switch m := metric.(type) {
 		case metrics.CounterValue:
-			count := int(m)
-			prev := r.previousCounters[name]
-			r.previousCounters[name] = count
-			if err := stathat.PostEZCount(name, r.email, count-prev); err != nil {
+			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, int64(m)))); err != nil {
 				log.Printf("ERR stathat.PostEZCount: %+v", err)
 			}
 		case metrics.GaugeValue:
@@ -56,10 +53,7 @@ func (r *statHatReporter) Report(registry *metrics.Registry) {
 				log.Printf("ERR stathat.PostEZValue: %+v", err)
 			}
 		case metrics.Counter:
-			count := int(m.Count())
-			prev := r.previousCounters[name]
-			r.previousCounters[name] = count
-			if err := stathat.PostEZCount(name, r.email, count-prev); err != nil {
+			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, m.Count()))); err != nil {
 				log.Printf("ERR stathat.PostEZCount: %+v", err)
 			}
 		case *metrics.EWMA:
@@ -79,8 +73,12 @@ func (r *statHatReporter) Report(registry *metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				if err := stathat.PostEZValue(name+".mean", r.email, m.Mean()); err != nil {
-					log.Printf("ERR stathat.PostEZValue: %+v", err)
+				deltaCount := r.counterCache.delta(name+".count", int64(count))
+				if deltaCount > 0 {
+					deltaSum := r.counterCache.delta(name+".sum", m.Sum())
+					if err := stathat.PostEZValue(name+".mean", r.email, float64(deltaSum)/float64(deltaCount)); err != nil {
+						log.Printf("ERR stathat.PostEZValue: %+v", err)
+					}
 				}
 				percentiles := m.Percentiles(r.percentiles)
 				for i, perc := range percentiles {
