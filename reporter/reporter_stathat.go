@@ -10,14 +10,15 @@ import (
 )
 
 type StatHatReporter struct {
-	source          string
-	email           string
-	registry        *metrics.Registry
-	interval        time.Duration
-	ticker          *time.Ticker
-	closeChan       chan bool
-	percentiles     []float64
-	percentileNames []string
+	source           string
+	email            string
+	registry         *metrics.Registry
+	interval         time.Duration
+	ticker           *time.Ticker
+	closeChan        chan bool
+	percentiles      []float64
+	percentileNames  []string
+	previousCounters map[string]int // TODO: These should expire if counters aren't seen again
 }
 
 func NewStatHatReporter(registry *metrics.Registry, interval time.Duration, email, source string, percentiles map[string]float64) *StatHatReporter {
@@ -34,12 +35,13 @@ func NewStatHatReporter(registry *metrics.Registry, interval time.Duration, emai
 	}
 
 	return &StatHatReporter{
-		source:          source,
-		email:           email,
-		registry:        registry,
-		interval:        interval,
-		percentiles:     per,
-		percentileNames: perNames,
+		source:           source,
+		email:            email,
+		registry:         registry,
+		interval:         interval,
+		percentiles:      per,
+		percentileNames:  perNames,
+		previousCounters: make(map[string]int),
 	}
 }
 
@@ -60,7 +62,10 @@ func (r *StatHatReporter) Start() {
 					name = strings.Replace(name, "/", ".", -1)
 					switch m := metric.(type) {
 					case metrics.Counter:
-						if err := stathat.PostEZCount(name, r.email, int(m.Count())); err != nil {
+						count := int(m.Count())
+						prev := r.previousCounters[name]
+						r.previousCounters[name] = count
+						if err := stathat.PostEZCount(name, r.email, count-prev); err != nil {
 							log.Printf("ERR stathat.PostEZCount: %+v", err)
 						}
 					case *metrics.EWMA:
