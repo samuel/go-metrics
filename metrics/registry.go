@@ -51,15 +51,18 @@ func (r *Registry) Remove(name string) {
 func (r *Registry) Do(f Doer) error {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	return do(r.metrics, f)
+	return do("", r.metrics, f)
 }
 
-func do(metrics map[string]interface{}, f Doer) error {
+func do(scope string, metrics map[string]interface{}, f Doer) error {
 	for name, metric := range metrics {
+		if scope != "" {
+			name = scope + "/" + name
+		}
 		if collection, ok := metric.(Collection); ok {
 			met := collection.Metrics()
 			if met != nil {
-				if err := do(met, f); err != nil {
+				if err := do(name, met, f); err != nil {
 					return err
 				}
 			}
