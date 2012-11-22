@@ -144,6 +144,8 @@ func (r *LibratoReporter) recorder(ch <-chan time.Time) {
 							})
 					}
 				}
+			default:
+				log.Printf("Unrecognized metric type for %s: %+v", name, m)
 			}
 			return nil
 		})

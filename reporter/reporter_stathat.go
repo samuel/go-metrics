@@ -106,6 +106,8 @@ func (r *StatHatReporter) Start() {
 								}
 							}
 						}
+					default:
+						log.Printf("Unrecognized metric type for %s: %+v", name, m)
 					}
 					return nil
 				})
