@@ -96,7 +96,7 @@ func (r *graphiteReporter) Report(registry *metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				if _, err := fmt.Fprintf(conn, "%s.mean %f %d\n", r.sourcedName(name), m.Mean(), ts); err != nil {
+				if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".mean"), m.Mean(), ts); err != nil {
 					return err
 				}
 				percentiles := m.Percentiles(r.percentiles)
