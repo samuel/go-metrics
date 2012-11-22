@@ -12,12 +12,13 @@ import (
 
 type graphiteReporter struct {
 	addr             string
+	source           string
 	percentiles      []float64
 	percentileNames  []string
 	previousCounters map[string]int64 // TODO: These should expire if counters aren't seen again
 }
 
-func NewGraphiteReporter(registry *metrics.Registry, interval time.Duration, addr string, percentiles map[string]float64) *PeriodicReporter {
+func NewGraphiteReporter(registry *metrics.Registry, interval time.Duration, addr, source string, percentiles map[string]float64) *PeriodicReporter {
 	per := metrics.DefaultPercentiles
 	perNames := metrics.DefaultPercentileNames
 
@@ -32,11 +33,19 @@ func NewGraphiteReporter(registry *metrics.Registry, interval time.Duration, add
 
 	gr := &graphiteReporter{
 		addr:             addr,
+		source:           source,
 		percentiles:      per,
 		percentileNames:  perNames,
 		previousCounters: make(map[string]int64),
 	}
 	return NewPeriodicReporter(registry, interval, false, gr)
+}
+
+func (r *graphiteReporter) sourcedName(name string) string {
+	if r.source != "" {
+		return name + "." + r.source
+	}
+	return name
 }
 
 func (r *graphiteReporter) Report(registry *metrics.Registry) {
@@ -56,43 +65,43 @@ func (r *graphiteReporter) Report(registry *metrics.Registry) {
 			count := int64(m)
 			prev := r.previousCounters[name]
 			r.previousCounters[name] = count
-			if _, err := fmt.Fprintf(conn, "%s %d %d\n", name, count-prev, ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), count-prev, ts); err != nil {
 				return err
 			}
 		case metrics.GaugeValue:
-			if _, err := fmt.Fprintf(conn, "%s %f %d\n", name, m, ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), m, ts); err != nil {
 				return err
 			}
 		case metrics.Counter:
 			count := m.Count()
 			prev := r.previousCounters[name]
 			r.previousCounters[name] = count
-			if _, err := fmt.Fprintf(conn, "%s %d %d\n", name, count-prev, ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), count-prev, ts); err != nil {
 				return err
 			}
 		case *metrics.EWMA:
-			if _, err := fmt.Fprintf(conn, "%s %f %d\n", name, m.Rate(), ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), m.Rate(), ts); err != nil {
 				return err
 			}
 		case *metrics.Meter:
-			if _, err := fmt.Fprintf(conn, "%s.1m %f %d\n", name, m.OneMinuteRate(), ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".1m"), m.OneMinuteRate(), ts); err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintf(conn, "%s.5m %f %d\n", name, m.FiveMinuteRate(), ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".5m"), m.FiveMinuteRate(), ts); err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintf(conn, "%s.15m %f %d\n", name, m.FifteenMinuteRate(), ts); err != nil {
+			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".15m"), m.FifteenMinuteRate(), ts); err != nil {
 				return err
 			}
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				if _, err := fmt.Fprintf(conn, "%s.mean %f %d\n", name, m.Mean(), ts); err != nil {
+				if _, err := fmt.Fprintf(conn, "%s.mean %f %d\n", r.sourcedName(name), m.Mean(), ts); err != nil {
 					return err
 				}
 				percentiles := m.Percentiles(r.percentiles)
 				for i, perc := range percentiles {
-					if _, err := fmt.Fprintf(conn, "%s.%s %d %d\n", name, r.percentileNames[i], perc, ts); err != nil {
+					if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name+"."+r.percentileNames[i]), perc, ts); err != nil {
 						return err
 					}
 				}
