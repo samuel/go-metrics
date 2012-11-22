@@ -61,6 +61,17 @@ func (r *StatHatReporter) Start() {
 				r.registry.Do(func(name string, metric interface{}) error {
 					name = strings.Replace(name, "/", ".", -1)
 					switch m := metric.(type) {
+					case metrics.CounterValue:
+						count := int(m)
+						prev := r.previousCounters[name]
+						r.previousCounters[name] = count
+						if err := stathat.PostEZCount(name, r.email, count-prev); err != nil {
+							log.Printf("ERR stathat.PostEZCount: %+v", err)
+						}
+					case metrics.GaugeValue:
+						if err := stathat.PostEZValue(name, r.email, float64(m)); err != nil {
+							log.Printf("ERR stathat.PostEZValue: %+v", err)
+						}
 					case metrics.Counter:
 						count := int(m.Count())
 						prev := r.previousCounters[name]

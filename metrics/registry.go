@@ -10,6 +10,12 @@ type Registry struct {
 	mutex   sync.RWMutex
 }
 
+type Collection interface {
+	Metrics() map[string]interface{}
+}
+
+type Doer func(name string, metric interface{}) error
+
 func NewRegistry() *Registry {
 	return &Registry{
 		metrics: make(map[string]interface{}),
@@ -42,15 +48,24 @@ func (r *Registry) Remove(name string) {
 	r.mutex.Unlock()
 }
 
-func (r *Registry) Do(f func(name string, metric interface{}) error) error {
+func (r *Registry) Do(f Doer) error {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
+	return do(r.metrics, f)
+}
 
-	for name, metric := range r.metrics {
-		if err := f(name, metric); err != nil {
+func do(metrics map[string]interface{}, f Doer) error {
+	for name, metric := range metrics {
+		if collection, ok := metric.(Collection); ok {
+			met := collection.Metrics()
+			if met != nil {
+				if err := do(met, f); err != nil {
+					return err
+				}
+			}
+		} else if err := f(name, metric); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }

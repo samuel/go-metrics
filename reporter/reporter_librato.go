@@ -86,6 +86,18 @@ func (r *LibratoReporter) recorder(ch <-chan time.Time) {
 			count++
 			name = strings.Replace(name, "/", ".", -1)
 			switch m := metric.(type) {
+			case metrics.CounterValue:
+				mets.Counters = append(mets.Counters,
+					librato.Metric{
+						Name:  name,
+						Value: float64(m),
+					})
+			case metrics.GaugeValue:
+				mets.Gauges = append(mets.Gauges,
+					librato.Metric{
+						Name:  name,
+						Value: float64(m),
+					})
 			case metrics.Counter:
 				mets.Counters = append(mets.Counters,
 					librato.Metric{

@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 )
 
+type CounterValue int64
+
 type Counter interface {
 	Inc(delta int64)
 	Dec(delta int64)
