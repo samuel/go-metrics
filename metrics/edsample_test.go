@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"testing"
+	"time"
 )
 
 type testEDSampleStruct struct {
@@ -30,12 +31,66 @@ func TestEDSampleSizes(t *testing.T) {
 			t.Errorf("Size of sample should be %d but is %d", data.reservoirSize, sample.Len())
 		}
 		// Should only have elements from the population
-		values := sample.Values()
-		for i := 0; i < len(values); i++ {
-			if values[i] < 0 || values[i] >= int64(data.populationSize) {
-				t.Errorf("Sample found that's not from population: %d", values[i])
-			}
+		if val, ok := allValuesBetween(sample.Values(), 0, int64(data.populationSize)); !ok {
+			t.Errorf("Sample found that's not from population: %d", val)
 		}
+	}
+}
+
+func allValuesBetween(values []int64, min, max int64) (int64, bool) {
+	for _, v := range values {
+		if v < min || v > max {
+			return v, false
+		}
+	}
+	return 0, true
+}
+
+// long periods of inactivity should not corrupt sampling state
+func TestEDSampleInactivity(t *testing.T) {
+	curTime := time.Time{}
+	timefunc := func() time.Time {
+		return curTime
+	}
+
+	sample := NewExponentiallyDecayingSampleWithCustomTime(10, 0.015, timefunc)
+	realSample := sample.(*exponentiallyDecayingSample)
+
+	// add 1000 values at a rate of 10 values/second
+	for i := int64(0); i < 1000; i++ {
+		sample.Update(1000 + i)
+		curTime = curTime.Add(time.Millisecond * 100)
+	}
+	if len(sample.Values()) != 10 {
+		t.Fatalf("Expected 10 samples instead of %d", len(sample.Values()))
+	}
+	if val, ok := allValuesBetween(sample.Values(), 1000, 2000); !ok {
+		t.Errorf("Sample found that's not from population: %d", val)
+	}
+
+	// wait for 15 hours and add another value.
+	// this should trigger a rescale. Note that the number of samples will be reduced to 2
+	// because of the very small scaling factor that will make all existing priorities equal to
+	// zero after rescale.
+	curTime = curTime.Add(time.Hour * 15)
+	sample.Update(2000)
+	if val, ok := allValuesBetween(sample.Values(), 1000, 3000); !ok {
+		t.Errorf("Sample found that's not from population: %d", val)
+	}
+	// if len(sample.Values()) != 2 {
+	// 	t.Fatalf("Expected 2 samples instead of %d: %+v", len(sample.Values()), realSample.values)
+	// }
+
+	// add 1000 values at a rate of 10 values/second
+	for i := int64(0); i < 1000; i++ {
+		sample.Update(3000 + i)
+		curTime = curTime.Add(time.Millisecond * 100)
+	}
+	if len(sample.Values()) != 10 {
+		t.Fatalf("Expected 10 samples instead of %d: %+v", len(sample.Values()), realSample.values)
+	}
+	if val, ok := allValuesBetween(sample.Values(), 3000, 4000); !ok {
+		t.Errorf("Sample found that's not from population: %d", val)
 	}
 }
 

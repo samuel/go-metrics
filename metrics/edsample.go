@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"container/heap"
-	"fmt"
 	"math"
 	"math/rand"
 	"time"
@@ -23,51 +22,47 @@ type reservoir struct {
 	samples []priorityValue
 }
 
-func (self *reservoir) String() string {
-	return fmt.Sprintf("%s", self.Values())
+func (r *reservoir) Clear() {
+	r.samples = r.samples[0:0]
 }
 
-func (self *reservoir) Clear() {
-	self.samples = self.samples[0:0]
+func (r *reservoir) Get(i int) priorityValue {
+	return r.samples[i]
 }
 
-func (self *reservoir) Get(i int) priorityValue {
-	return self.samples[i]
-}
-
-func (self *reservoir) Values() (values []int64) {
-	values = make([]int64, len(self.samples))
-	for i, sample := range self.samples {
+func (r *reservoir) Values() (values []int64) {
+	values = make([]int64, len(r.samples))
+	for i, sample := range r.samples {
 		values[i] = sample.value
 	}
 	return
 }
 
-func (self *reservoir) ScalePriority(scale float64) {
-	for i, sample := range self.samples {
-		self.samples[i] = priorityValue{sample.priority * scale, sample.value}
+func (r *reservoir) ScalePriority(scale float64) {
+	for i, sample := range r.samples {
+		r.samples[i] = priorityValue{sample.priority * scale, sample.value}
 	}
 }
 
-func (self *reservoir) Len() int {
-	return len(self.samples)
+func (r *reservoir) Len() int {
+	return len(r.samples)
 }
 
-func (self *reservoir) Less(i, j int) bool {
-	return self.samples[i].priority < self.samples[j].priority
+func (r *reservoir) Less(i, j int) bool {
+	return r.samples[i].priority < r.samples[j].priority
 }
 
-func (self *reservoir) Swap(i, j int) {
-	self.samples[i], self.samples[j] = self.samples[j], self.samples[i]
+func (r *reservoir) Swap(i, j int) {
+	r.samples[i], r.samples[j] = r.samples[j], r.samples[i]
 }
 
-func (self *reservoir) Push(x interface{}) {
-	self.samples = append(self.samples, x.(priorityValue))
+func (r *reservoir) Push(x interface{}) {
+	r.samples = append(r.samples, x.(priorityValue))
 }
 
-func (self *reservoir) Pop() interface{} {
-	v := self.samples[len(self.samples)-1]
-	self.samples = self.samples[:len(self.samples)-1]
+func (r *reservoir) Pop() interface{} {
+	v := r.samples[len(r.samples)-1]
+	r.samples = r.samples[:len(r.samples)-1]
 	return v
 }
 
@@ -81,6 +76,7 @@ type exponentiallyDecayingSample struct {
 	count         int
 	startTime     time.Time
 	nextScaleTime time.Time
+	now           func() time.Time
 }
 
 // An exponentially-decaying random sample of values. Uses Cormode et
@@ -93,10 +89,16 @@ type exponentiallyDecayingSample struct {
 // Systems. ICDE '09: Proceedings of the 2009 IEEE International Conference on
 // Data Engineering (2009)
 func NewExponentiallyDecayingSample(reservoirSize int, alpha float64) Sample {
+	return NewExponentiallyDecayingSampleWithCustomTime(reservoirSize, alpha, time.Now)
+}
+
+func NewExponentiallyDecayingSampleWithCustomTime(reservoirSize int, alpha float64, now func() time.Time) Sample {
 	eds := exponentiallyDecayingSample{
 		reservoirSize: reservoirSize,
 		alpha:         alpha,
-		values:        &reservoir{}}
+		values:        &reservoir{},
+		now:           now,
+	}
 	eds.Clear()
 	return &eds
 }
@@ -105,7 +107,7 @@ func (self *exponentiallyDecayingSample) Clear() {
 	self.values.Clear()
 	heap.Init(self.values)
 	self.count = 0
-	self.startTime = time.Now()
+	self.startTime = self.now()
 	self.nextScaleTime = self.startTime.Add(edRescaleThreshold)
 }
 
@@ -121,21 +123,22 @@ func (self *exponentiallyDecayingSample) Values() []int64 {
 }
 
 func (self *exponentiallyDecayingSample) Update(value int64) {
-	timestamp := time.Now()
+	timestamp := self.now()
+	if timestamp.After(self.nextScaleTime) {
+		self.rescale(timestamp)
+	}
+
+	timestamp = self.now()
 	priority := self.weight(timestamp.Sub(self.startTime)) / rand.Float64()
 	self.count++
 	if self.count <= self.reservoirSize {
 		heap.Push(self.values, priorityValue{priority, value})
 	} else {
-		if first := self.values.Get(0); first.priority > priority {
+		if first := self.values.Get(0); first.priority < priority {
 			// heap.Replace(self.values, priorityValue{priority, value})
 			heap.Pop(self.values)
 			heap.Push(self.values, priorityValue{priority, value})
 		}
-	}
-
-	if timestamp.After(self.nextScaleTime) {
-		self.rescale(timestamp)
 	}
 }
 
@@ -168,4 +171,5 @@ func (self *exponentiallyDecayingSample) rescale(now time.Time) {
 	self.startTime = now
 	scale := math.Exp(-self.alpha * self.startTime.Sub(oldStartTime).Seconds())
 	self.values.ScalePriority(scale)
+	self.count = self.values.Len()
 }
