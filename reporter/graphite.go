@@ -18,7 +18,7 @@ type graphiteReporter struct {
 	counterCache    *counterDeltaCache
 }
 
-func NewGraphiteReporter(registry *metrics.Registry, interval time.Duration, addr, source string, percentiles map[string]float64) *PeriodicReporter {
+func NewGraphiteReporter(registry metrics.Registry, interval time.Duration, addr, source string, percentiles map[string]float64) *PeriodicReporter {
 	per := metrics.DefaultPercentiles
 	perNames := metrics.DefaultPercentileNames
 
@@ -48,7 +48,7 @@ func (r *graphiteReporter) sourcedName(name string) string {
 	return name
 }
 
-func (r *graphiteReporter) Report(registry *metrics.Registry) {
+func (r *graphiteReporter) Report(registry metrics.Registry) {
 	conn, err := net.Dial("tcp", r.addr)
 	if err != nil {
 		log.Printf("Failed to connect to graphite/carbon: %+v", err)

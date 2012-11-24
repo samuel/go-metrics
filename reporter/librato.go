@@ -17,7 +17,7 @@ type libratoReporter struct {
 	counterCache    *counterDeltaCache
 }
 
-func NewLibratoReporter(registry *metrics.Registry, interval time.Duration, username, token, source string, percentiles map[string]float64) *PeriodicReporter {
+func NewLibratoReporter(registry metrics.Registry, interval time.Duration, username, token, source string, percentiles map[string]float64) *PeriodicReporter {
 	per := metrics.DefaultPercentiles
 	perNames := metrics.DefaultPercentileNames
 
@@ -40,7 +40,7 @@ func NewLibratoReporter(registry *metrics.Registry, interval time.Duration, user
 	return NewPeriodicReporter(registry, interval, true, lr)
 }
 
-func (r *libratoReporter) Report(registry *metrics.Registry) {
+func (r *libratoReporter) Report(registry metrics.Registry) {
 	mets := &librato.MetricsFormat{Source: r.source}
 	count := 0
 

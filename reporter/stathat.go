@@ -17,7 +17,7 @@ type statHatReporter struct {
 	counterCache    *counterDeltaCache
 }
 
-func NewStatHatReporter(registry *metrics.Registry, interval time.Duration, email, source string, percentiles map[string]float64) *PeriodicReporter {
+func NewStatHatReporter(registry metrics.Registry, interval time.Duration, email, source string, percentiles map[string]float64) *PeriodicReporter {
 	per := metrics.DefaultPercentiles
 	perNames := metrics.DefaultPercentileNames
 
@@ -40,7 +40,7 @@ func NewStatHatReporter(registry *metrics.Registry, interval time.Duration, emai
 	return NewPeriodicReporter(registry, interval, false, sr)
 }
 
-func (r *statHatReporter) Report(registry *metrics.Registry) {
+func (r *statHatReporter) Report(registry metrics.Registry) {
 	registry.Do(func(name string, metric interface{}) error {
 		name = strings.Replace(name, "/", ".", -1)
 		switch m := metric.(type) {

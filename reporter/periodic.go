@@ -7,7 +7,7 @@ import (
 )
 
 type PeriodicReporter struct {
-	registry      *metrics.Registry
+	registry      metrics.Registry
 	interval      time.Duration
 	alignInterval bool
 	ticker        *time.Ticker
@@ -16,10 +16,10 @@ type PeriodicReporter struct {
 }
 
 type Reporter interface {
-	Report(registry *metrics.Registry)
+	Report(registry metrics.Registry)
 }
 
-func NewPeriodicReporter(registry *metrics.Registry, interval time.Duration, alignInterval bool, reporter Reporter) *PeriodicReporter {
+func NewPeriodicReporter(registry metrics.Registry, interval time.Duration, alignInterval bool, reporter Reporter) *PeriodicReporter {
 	return &PeriodicReporter{
 		registry:      registry,
 		interval:      interval,
