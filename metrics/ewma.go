@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	// 5 minute interval, 60 seconds per minute, 1 minute
+	// 5 second interval, 60 seconds per minute, 1 minute
 	M1Alpha = 1 - math.Exp(-5.0/60/1)
-	// 5 minute interval, 60 seconds per minute, 5 minutes
+	// 5 second interval, 60 seconds per minute, 5 minutes
 	M5Alpha = 1 - math.Exp(-5.0/60/5)
-	// 5 minute interval, 60 seconds per minute, 15 minutes
+	// 5 second interval, 60 seconds per minute, 15 minutes
 	M15Alpha = 1 - math.Exp(-5.0/60/15)
 )
 
