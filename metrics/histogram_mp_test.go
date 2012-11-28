@@ -203,3 +203,15 @@ func addToHist(hist Histogram, n int) {
 		hist.Update(1)
 	}
 }
+
+func BenchmarkMPDefaultHistogramUpdate(b *testing.B) {
+	benchmarkHistogramUpdate(b, NewDefaultMunroPatersonHistogram())
+}
+
+func BenchmarkMPDefaultHistogramPercentiles(b *testing.B) {
+	benchmarkHistogramPercentiles(b, NewDefaultMunroPatersonHistogram())
+}
+
+func BenchmarkMPDefaultHistogramConcurrentUpdate(b *testing.B) {
+	benchmarkHistogramConcurrentUpdate(b, NewDefaultMunroPatersonHistogram())
+}

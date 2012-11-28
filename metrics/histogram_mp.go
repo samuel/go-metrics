@@ -3,6 +3,7 @@ package metrics
 import (
 	"math"
 	"sort"
+	"sync"
 )
 
 const (
@@ -25,11 +26,15 @@ type mpHistogram struct {
 	bufferPool [2][]int64
 	indices    []int
 	count      int64
+	sum        int64
+	min        int64
+	max        int64
 	leafCount  int // number of elements in the bottom two leaves
 	currentTop int
 	rootWeight int
 	bufferSize int
 	maxDepth   int
+	mutex      sync.RWMutex
 }
 
 // An implemenation of the Munro-Paterson approximate histogram algorithm adapted from:
@@ -44,8 +49,6 @@ func NewMunroPatersonHistogram(bufSize, maxDepth int) Histogram {
 		buffer:     buffer,
 		bufferPool: [2][]int64{make([]int64, bufSize), make([]int64, bufSize)},
 		indices:    make([]int, maxDepth+1),
-		count:      0,
-		leafCount:  0,
 		rootWeight: 1,
 		currentTop: 1,
 		bufferSize: bufSize,
@@ -71,36 +74,62 @@ func NewMunroPatersonHistogramWithPrecision(p Precision) Histogram {
 }
 
 func (mp *mpHistogram) String() string {
-	return histogramToJson(mp, DefaultPercentiles, DefaultPercentileNames)
+	mp.mutex.RLock()
+	js := histogramToJson(mp, DefaultPercentiles, DefaultPercentileNames)
+	mp.mutex.RUnlock()
+	return js
 }
 
 func (mp *mpHistogram) Clear() {
+	mp.mutex.Lock()
 	mp.count = 0
+	mp.sum = 0
 	mp.leafCount = 0
 	mp.rootWeight = 1
+	mp.min = 0
+	mp.max = 0
+	mp.mutex.Unlock()
 }
 
 func (mp *mpHistogram) Count() uint64 {
-	return uint64(mp.count)
+	mp.mutex.RLock()
+	count := uint64(mp.count)
+	mp.mutex.RUnlock()
+	return count
 }
 
 func (mp *mpHistogram) Mean() float64 {
-	return 0
-}
-
-func (mp *mpHistogram) Min() int64 {
-	return 0
-}
-
-func (mp *mpHistogram) Max() int64 {
-	return 0
+	mp.mutex.RLock()
+	mean := float64(mp.sum) / float64(mp.count)
+	mp.mutex.RUnlock()
+	return mean
 }
 
 func (mp *mpHistogram) Sum() int64 {
-	return 0
+	mp.mutex.RLock()
+	sum := mp.sum
+	mp.mutex.RUnlock()
+	return sum
+}
+
+func (mp *mpHistogram) Min() int64 {
+	mp.mutex.RLock()
+	min := mp.min
+	mp.mutex.RUnlock()
+	return min
+}
+
+func (mp *mpHistogram) Max() int64 {
+	mp.mutex.RLock()
+	max := mp.max
+	mp.mutex.RUnlock()
+	return max
 }
 
 func (mp *mpHistogram) Percentiles(qs []float64) []int64 {
+	mp.mutex.Lock()
+	defer mp.mutex.Unlock()
+
 	output := make([]int64, len(qs))
 	if mp.count == 0 {
 		return output
@@ -169,6 +198,7 @@ func (mp *mpHistogram) smallest(buf0Size, buf1Size int, ids []int) int {
 }
 
 func (mp *mpHistogram) Update(x int64) {
+	mp.mutex.Lock()
 	// if the leaves of the tree are full, "collapse" recursively the tree
 	if mp.leafCount == 2*mp.bufferSize {
 		sort.Sort(int64Slice(mp.buffer[0]))
@@ -184,7 +214,20 @@ func (mp *mpHistogram) Update(x int64) {
 		mp.buffer[1][mp.leafCount-mp.bufferSize] = x
 	}
 	mp.leafCount++
+	if mp.count == 0 {
+		mp.min = x
+		mp.max = x
+	} else {
+		if x < mp.min {
+			mp.min = x
+		}
+		if x > mp.max {
+			mp.max = x
+		}
+	}
 	mp.count++
+	mp.sum += x
+	mp.mutex.Unlock()
 }
 
 func (mp *mpHistogram) recCollapse(buf []int64, level int) {
@@ -256,7 +299,7 @@ func (mp *mpHistogram) collapse(left []int64, leftWeight int, right []int64, rig
 		}
 
 		cnt += weight
-		for cnt >= cnt1 {
+		if cnt >= cnt1 {
 			cnt -= totalWeight
 			if cnt > 0 {
 				output[k] = smallest
