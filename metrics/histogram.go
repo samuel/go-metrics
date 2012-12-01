@@ -1,3 +1,7 @@
+// Copyright 2012 Samuel Stauffer. All rights reserved.
+// Use of this source code is governed by a 3-clause BSD
+// license that can be found in the LICENSE file.
+
 package metrics
 
 // import "encoding/json"
@@ -14,7 +18,7 @@ var (
 
 type Histogram interface {
 	Clear()
-	Update(value int64)
+	Update(int64)
 	Count() uint64
 	Sum() int64
 	Min() int64
