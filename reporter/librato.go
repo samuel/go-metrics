@@ -76,6 +76,12 @@ func (r *libratoReporter) Report(registry metrics.Registry) {
 					Name:  name,
 					Value: m.Rate(),
 				})
+		case *metrics.EWMAGauge:
+			mets.Gauges = append(mets.Gauges,
+				librato.Metric{
+					Name:  name,
+					Value: m.Mean(),
+				})
 		case *metrics.Meter:
 			mets.Gauges = append(mets.Gauges,
 				librato.Metric{

@@ -81,6 +81,10 @@ func (r *graphiteReporter) Report(registry metrics.Registry) {
 			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), m.Rate(), ts); err != nil {
 				return err
 			}
+		case *metrics.EWMAGauge:
+			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), m.Mean(), ts); err != nil {
+				return err
+			}
 		case *metrics.Meter:
 			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name+".1m"), m.OneMinuteRate(), ts); err != nil {
 				return err

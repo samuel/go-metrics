@@ -64,6 +64,10 @@ func (r *statHatReporter) Report(registry metrics.Registry) {
 			if err := stathat.PostEZValue(name, r.email, m.Rate()); err != nil {
 				log.Printf("ERR stathat.PostEZValue: %+v", err)
 			}
+		case *metrics.EWMAGauge:
+			if err := stathat.PostEZValue(name, r.email, m.Mean()); err != nil {
+				log.Printf("ERR stathat.PostEZValue: %+v", err)
+			}
 		case *metrics.Meter:
 			if err := stathat.PostEZValue(name+".1m", r.email, m.OneMinuteRate()); err != nil {
 				log.Printf("ERR stathat.PostEZValue: %+v", err)
