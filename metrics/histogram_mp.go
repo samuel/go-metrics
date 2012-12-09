@@ -78,10 +78,7 @@ func NewMunroPatersonHistogramWithPrecision(p Precision) Histogram {
 }
 
 func (mp *mpHistogram) String() string {
-	mp.mutex.RLock()
-	js := histogramToJson(mp, DefaultPercentiles, DefaultPercentileNames)
-	mp.mutex.RUnlock()
-	return js
+	return histogramToJson(mp, DefaultPercentiles, DefaultPercentileNames)
 }
 
 func (mp *mpHistogram) Clear() {
