@@ -273,12 +273,10 @@ func (mp *mpHistogram) recCollapse(buf []int64, level int) {
 //     select every nth elems = [3,7,9]  (n = sum weight / 2)
 func (mp *mpHistogram) collapse(left []int64, leftWeight int, right []int64, rightWeight int, output []int64) {
 	totalWeight := leftWeight + rightWeight
-	cnt0 := -totalWeight / 2
-	cnt1 := totalWeight + cnt0
 	i := 0
 	j := 0
 	k := 0
-	cnt := cnt0
+	cnt := 0
 
 	var smallest int64
 	var weight int
@@ -294,18 +292,13 @@ func (mp *mpHistogram) collapse(left []int64, leftWeight int, right []int64, rig
 			j++
 		}
 
-		if cnt <= 0 && cnt+weight > 0 {
+		cur := (cnt + (totalWeight >> 1) - 1) / totalWeight
+		cnt += weight
+		next := (cnt + (totalWeight >> 1) - 1) / totalWeight
+
+		for ; cur < next; cur++ {
 			output[k] = smallest
 			k++
-		}
-
-		cnt += weight
-		if cnt >= cnt1 {
-			cnt -= totalWeight
-			if cnt > 0 {
-				output[k] = smallest
-				k++
-			}
 		}
 	}
 }
