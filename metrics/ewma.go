@@ -26,10 +26,10 @@ var (
 // http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf - UNIX Load Average Part 2: Not Your Average Average
 type EWMA struct {
 	interval       time.Duration // tick interval in seconds
+	rate           uint64        // really a float64 but using uint64 for atomicity
 	alpha          float64       // the smoothing constant
 	uncounted      uint64
 	initialized    bool
-	rate           uint64 // really a float64 but using uint64 for atomicity
 	ticker         *time.Ticker
 	tickerStopChan chan bool
 }

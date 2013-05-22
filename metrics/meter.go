@@ -11,10 +11,10 @@ import (
 )
 
 type Meter struct {
+	count          uint64
 	m1Rate         *EWMA
 	m5Rate         *EWMA
 	m15Rate        *EWMA
-	count          uint64
 	startTime      time.Time
 	ticker         *time.Ticker
 	tickerStopChan chan bool
