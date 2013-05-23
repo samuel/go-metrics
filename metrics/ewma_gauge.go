@@ -14,10 +14,10 @@ import (
 type FloatGaugeFunc func() float64
 
 type EWMAGauge struct {
-	interval       time.Duration // tick interval in seconds
+	mean           uint64        // really a float64 but using uint64 for atomicity
 	alpha          float64       // the smoothing constant
+	interval       time.Duration // tick interval in seconds
 	initialized    bool
-	mean           uint64 // really a float64 but using uint64 for atomicity
 	ticker         *time.Ticker
 	tickerStopChan chan bool
 	fun            FloatGaugeFunc
