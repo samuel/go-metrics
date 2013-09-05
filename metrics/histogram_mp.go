@@ -15,8 +15,8 @@ const (
 )
 
 var (
-	DefaultPrecision = Precision{0.0001, 1000 * 1000}
-	DefaultMaxMemory = 4 * 1024
+	DefaultPrecision = Precision{0.02, 100 * 1000}
+	DefaultMaxMemory = 12 * 1024
 )
 
 // Precision expresses the maximum epsilon tolerated for a typical size of input
@@ -65,16 +65,16 @@ func NewDefaultMunroPatersonHistogram() Histogram {
 }
 
 func NewMunroPatersonHistogramWithMaxMemory(bytes int) Histogram {
-	b := computeB(DefaultPrecision.Episilon, DefaultPrecision.N)
-	bufSize := computeBufferSize(b, DefaultPrecision.N)
+	depth := computeDepth(DefaultPrecision.Episilon, DefaultPrecision.N)
+	bufSize := computeBufferSize(depth, DefaultPrecision.N)
 	maxDepth := computeMaxDepth(bytes, bufSize)
 	return NewMunroPatersonHistogram(bufSize, maxDepth)
 }
 
 func NewMunroPatersonHistogramWithPrecision(p Precision) Histogram {
-	b := computeB(p.Episilon, p.N)
-	bufSize := computeBufferSize(b, p.N)
-	return NewMunroPatersonHistogram(bufSize, b)
+	depth := computeDepth(p.Episilon, p.N)
+	bufSize := computeBufferSize(depth, p.N)
+	return NewMunroPatersonHistogram(bufSize, depth)
 }
 
 func (mp *mpHistogram) String() string {
@@ -353,7 +353,7 @@ func (mp *mpHistogram) weight(level int) int {
 //
 // For an explanation of these inequalities, please read the Munro-Paterson or
 // the Manku-Rajagopalan-Linday papers.
-func computeB(epsilon float64, n int) int {
+func computeDepth(epsilon float64, n int) int {
 	b := uint(2)
 	en := epsilon * float64(n)
 	for float64((b-2)*(1<<(b-2)))+0.5 <= en {

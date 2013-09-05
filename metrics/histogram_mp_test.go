@@ -17,8 +17,8 @@ func TestMP(t *testing.T) {
 		hist.Update(int64(i + 1))
 	}
 	hist.Update(int64(1))
-	if hist.currentTop != 2 {
-		t.Fatalf("mp.currentTop is %d instead of 2", hist.currentTop)
+	if hist.currentTop != 3 {
+		t.Fatalf("mp.currentTop is %d instead of 3", hist.currentTop)
 	}
 
 	for i := 0; i <= hist.currentTop; i++ {

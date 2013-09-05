@@ -75,7 +75,7 @@ func TestHistogramAccuracy(t *testing.T) {
 	p2 := h2.Percentiles(perc)
 	p3 := h3.Percentiles(perc)
 	p4 := h4.Percentiles(perc)
-	t.Log("\t\tper\texp\tunbiased\tbiased  \tbucketed\tMP")
+	t.Log("per\texp\tunbiased\tbiased  \tbucketed\tMP")
 	for i, p := range perc {
 		pos := float64(count) * p
 		ipos := int(pos)
