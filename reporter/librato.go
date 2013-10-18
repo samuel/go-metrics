@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samuel/go-librato"
+	"github.com/samuel/go-librato/librato"
 	"github.com/samuel/go-metrics/metrics"
 )
 
@@ -36,7 +36,7 @@ func NewLibratoReporter(registry metrics.Registry, interval time.Duration, usern
 
 	lr := &libratoReporter{
 		source:          source,
-		lib:             &librato.Metrics{username, token},
+		lib:             &librato.Metrics{Username: username, Token: token},
 		percentiles:     per,
 		percentileNames: perNames,
 		counterCache:    &counterDeltaCache{},
