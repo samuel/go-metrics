@@ -27,7 +27,7 @@ type reservoir struct {
 }
 
 func (r *reservoir) Clear() {
-	r.samples = r.samples[0:0]
+	r.samples = r.samples[:0]
 }
 
 func (r *reservoir) Get(i int) priorityValue {
@@ -139,7 +139,10 @@ func (self *exponentiallyDecayingSample) Update(value int64) {
 		heap.Push(self.values, priorityValue{priority, value})
 	} else {
 		if first := self.values.Get(0); first.priority < priority {
-			// heap.Replace(self.values, priorityValue{priority, value})
+			// Once Go 1.2 is release
+			// self.values.samples[0] = priorityValue{priority, value}
+			// heap.Fix(self.values, 0)
+
 			heap.Pop(self.values)
 			heap.Push(self.values, priorityValue{priority, value})
 		}

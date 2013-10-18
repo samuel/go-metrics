@@ -66,10 +66,6 @@ func TestEWMATicker(t *testing.T) {
 	}
 	time.Sleep(time.Millisecond * 100)
 	e.Stop()
-	time.Sleep(time.Millisecond * 50)
-	if e.ticker != nil {
-		t.Errorf("EWMA.ticker should be nil")
-	}
 }
 
 func BenchmarkEWMAUpdate(b *testing.B) {
