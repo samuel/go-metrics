@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/samuel/go-librato"
+	"github.com/samuel/go-librato/librato"
 	"github.com/samuel/go-metrics/metrics"
 	"github.com/stathat/stathatgo"
 )
@@ -56,12 +56,12 @@ func init() {
 	m := expvar.NewMap("metricsd")
 	m.Set("requests", statRequestCount)
 	m.Set("requests_per_sec", statRequestRate)
-	m.Set("graphite_latency_us", &metrics.HistogramExport{statGraphiteLatency,
-		[]float64{0.5, 0.9, 0.99, 0.999}, []string{"p50", "p90", "p99", "p999"}})
-	m.Set("librato_latency_us", &metrics.HistogramExport{statLibratoLatency,
-		[]float64{0.5, 0.9, 0.99, 0.999}, []string{"p50", "p90", "p99", "p999"}})
-	m.Set("stathat_latency_us", &metrics.HistogramExport{statStatHatLatency,
-		[]float64{0.5, 0.9, 0.99, 0.999}, []string{"p50", "p90", "p99", "p999"}})
+	m.Set("graphite_latency_us", &metrics.HistogramExport{Histogram: statGraphiteLatency,
+		Percentiles: []float64{0.5, 0.9, 0.99, 0.999}, PercentileNames: []string{"p50", "p90", "p99", "p999"}})
+	m.Set("librato_latency_us", &metrics.HistogramExport{Histogram: statLibratoLatency,
+		Percentiles: []float64{0.5, 0.9, 0.99, 0.999}, PercentileNames: []string{"p50", "p90", "p99", "p999"}})
+	m.Set("stathat_latency_us", &metrics.HistogramExport{Histogram: statStatHatLatency,
+		Percentiles: []float64{0.5, 0.9, 0.99, 0.999}, PercentileNames: []string{"p50", "p90", "p99", "p999"}})
 }
 
 func main() {
@@ -149,7 +149,7 @@ func updateHistogram(name string, value int64) {
 func reporter() {
 	var met *librato.Metrics = nil
 	if *f_username != "" && *f_token != "" {
-		met = &librato.Metrics{*f_username, *f_token}
+		met = &librato.Metrics{Username: *f_username, Token: *f_token}
 	}
 	tc := time.Tick(REPORT_INTERVAL)
 	for {
