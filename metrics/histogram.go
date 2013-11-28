@@ -4,7 +4,6 @@
 
 package metrics
 
-// import "encoding/json"
 import (
 	"bytes"
 	"fmt"
