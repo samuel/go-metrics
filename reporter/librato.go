@@ -64,6 +64,12 @@ func (r *libratoReporter) Report(registry metrics.Registry) {
 					Name:  name,
 					Value: float64(m),
 				})
+		case metrics.IntegerGauge:
+			mets.Gauges = append(mets.Gauges,
+				librato.Metric{
+					Name:  name,
+					Value: float64(m.Value()),
+				})
 		case metrics.Counter:
 			mets.Counters = append(mets.Counters,
 				librato.Metric{

@@ -56,6 +56,10 @@ func (r *statHatReporter) Report(registry metrics.Registry) {
 			if err := stathat.PostEZValue(name, r.email, float64(m)); err != nil {
 				log.Printf("ERR stathat.PostEZValue: %+v", err)
 			}
+		case metrics.IntegerGauge:
+			if err := stathat.PostEZValue(name, r.email, float64(m.Value())); err != nil {
+				log.Printf("ERR stathat.PostEZValue: %+v", err)
+			}
 		case metrics.Counter:
 			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, m.Count()))); err != nil {
 				log.Printf("ERR stathat.PostEZCount: %+v", err)

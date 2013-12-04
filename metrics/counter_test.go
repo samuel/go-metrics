@@ -15,10 +15,6 @@ func TestCounter(t *testing.T) {
 	if c.Count() != 2 {
 		t.Fatalf("Counter inc should have made value 2 not %d", c.Count())
 	}
-	c.Dec(1)
-	if c.Count() != 1 {
-		t.Fatalf("Counter dec should have made value 1 not %d", c.Count())
-	}
 }
 
 func BenchmarkCounterInc(b *testing.B) {
@@ -32,12 +28,5 @@ func BenchmarkCounterCount(b *testing.B) {
 	c := NewCounter()
 	for i := 0; i < b.N; i++ {
 		c.Count()
-	}
-}
-
-func BenchmarkCounterSet(b *testing.B) {
-	c := NewCounter()
-	for i := 0; i < b.N; i++ {
-		c.Set(1)
 	}
 }

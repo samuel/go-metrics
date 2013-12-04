@@ -73,6 +73,10 @@ func (r *graphiteReporter) Report(registry metrics.Registry) {
 			if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), m, ts); err != nil {
 				return err
 			}
+		case metrics.IntegerGauge:
+			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name), m.Value(), ts); err != nil {
+				return err
+			}
 		case metrics.Counter:
 			if _, err := fmt.Fprintf(conn, "%s %d %d\n", r.sourcedName(name+".count"), r.counterCache.delta(name, m.Count()), ts); err != nil {
 				return err
