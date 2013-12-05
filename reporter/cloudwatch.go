@@ -23,6 +23,7 @@ type cloudWatchReporter struct {
 	client          *aws4.Client
 	dimensions      map[string]string
 	endpoint        string
+	securityToken   string
 }
 
 type cloudWatchMetric struct {
@@ -37,12 +38,12 @@ type cloudWatchMetric struct {
 
 const cloudWatchVersion = "2010-08-01"
 
-func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region, accessKey, secretKey, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *PeriodicReporter {
-	lr := newCloudWatchReporter(interval, region, accessKey, secretKey, namespace, dimensions, percentiles, timeout)
+func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region, accessKey, secretKey, securityToken, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *PeriodicReporter {
+	lr := newCloudWatchReporter(interval, region, accessKey, secretKey, securityToken, namespace, dimensions, percentiles, timeout)
 	return NewPeriodicReporter(registry, interval, true, lr)
 }
 
-func newCloudWatchReporter(interval time.Duration, region, accessKey, secretKey, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *cloudWatchReporter {
+func newCloudWatchReporter(interval time.Duration, region, accessKey, secretKey, securityToken, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *cloudWatchReporter {
 	per := metrics.DefaultPercentiles
 	perNames := metrics.DefaultPercentileNames
 
@@ -74,6 +75,7 @@ func newCloudWatchReporter(interval time.Duration, region, accessKey, secretKey,
 		percentileNames: perNames,
 		counterCache:    &counterDeltaCache{},
 		dimensions:      dimensions,
+		securityToken:   securityToken,
 		client: &aws4.Client{
 			Keys: &aws4.Keys{
 				AccessKey: accessKey,
@@ -135,6 +137,9 @@ func (r *cloudWatchReporter) Report(registry metrics.Registry) {
 		params.Set("Namespace", r.namespace)
 		params.Set("Action", "PutMetricData")
 		params.Set("Version", cloudWatchVersion)
+		if r.securityToken != "" {
+			params.Set("SecurityToken", r.securityToken)
+		}
 		idx := 1
 		for name, m := range mets {
 			prefix := fmt.Sprintf("MetricData.member.%d.", idx)
