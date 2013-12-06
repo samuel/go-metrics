@@ -92,13 +92,13 @@ func (r *cloudWatchReporter) Report(registry metrics.Registry) {
 		name = strings.Replace(name, "/", ".", -1)
 		switch m := metric.(type) {
 		case metrics.CounterValue:
-			mets[name] = cloudWatchMetric{value: int64(m)}
+			mets[name] = cloudWatchMetric{value: r.counterCache.delta(name, int64(m))}
 		case metrics.GaugeValue:
 			mets[name] = cloudWatchMetric{value: int64(m)}
 		case metrics.IntegerGauge:
 			mets[name] = cloudWatchMetric{value: int64(m.Value())}
 		case metrics.Counter:
-			mets[name] = cloudWatchMetric{value: int64(m.Count())}
+			mets[name] = cloudWatchMetric{value: r.counterCache.delta(name, m.Count())}
 		case *metrics.EWMA:
 			mets[name] = cloudWatchMetric{value: m.Rate()}
 		case *metrics.EWMAGauge:
