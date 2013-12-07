@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/bmizerany/aws4"
@@ -24,8 +23,7 @@ type cloudWatchReporter struct {
 	client          *aws4.Client
 	dimensions      map[string]string
 	endpoint        string
-	securityToken   string
-	mu              sync.Mutex
+	authFunc        AWSAuthFunc
 }
 
 type cloudWatchMetric struct {
@@ -40,20 +38,14 @@ type cloudWatchMetric struct {
 
 const cloudWatchVersion = "2010-08-01"
 
-type CloudWatchReporter struct {
-	*PeriodicReporter
-	rep *cloudWatchReporter
+type AWSAuthFunc func() (accessKey string, secretKey string, securityToken string)
+
+func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *PeriodicReporter {
+	lr := newCloudWatchReporter(interval, region, authFunc, namespace, dimensions, percentiles, timeout)
+	return NewPeriodicReporter(registry, interval, true, lr)
 }
 
-func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region, accessKey, secretKey, securityToken, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *CloudWatchReporter {
-	lr := newCloudWatchReporter(interval, region, accessKey, secretKey, securityToken, namespace, dimensions, percentiles, timeout)
-	return &CloudWatchReporter{
-		PeriodicReporter: NewPeriodicReporter(registry, interval, true, lr),
-		rep:              lr,
-	}
-}
-
-func newCloudWatchReporter(interval time.Duration, region, accessKey, secretKey, securityToken, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *cloudWatchReporter {
+func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *cloudWatchReporter {
 	per := metrics.DefaultPercentiles
 	perNames := metrics.DefaultPercentileNames
 
@@ -85,22 +77,12 @@ func newCloudWatchReporter(interval time.Duration, region, accessKey, secretKey,
 		percentileNames: perNames,
 		counterCache:    &counterDeltaCache{},
 		dimensions:      dimensions,
-		securityToken:   securityToken,
+		authFunc:        authFunc,
 		client: &aws4.Client{
-			Keys: &aws4.Keys{
-				AccessKey: accessKey,
-				SecretKey: secretKey,
-			},
+			Keys:   &aws4.Keys{},
 			Client: awsClient,
 		},
 	}
-}
-
-func (r *CloudWatchReporter) SetAuth(accessKey, secretKey, securityToken string) {
-	r.rep.mu.Lock()
-	r.rep.client.Keys = &aws4.Keys{AccessKey: accessKey, SecretKey: secretKey}
-	r.rep.securityToken = securityToken
-	r.rep.mu.Unlock()
 }
 
 func (r *cloudWatchReporter) Report(registry metrics.Registry) {
@@ -187,10 +169,11 @@ func (r *cloudWatchReporter) Report(registry metrics.Registry) {
 			}
 			idx++
 		}
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		if r.securityToken != "" {
-			params.Set("SecurityToken", r.securityToken)
+		accessKey, secretKey, securityToken := r.authFunc()
+		r.client.Keys.AccessKey = accessKey
+		r.client.Keys.SecretKey = secretKey
+		if securityToken != "" {
+			params.Set("SecurityToken", securityToken)
 		}
 		res, err := r.client.PostForm(r.endpoint, params)
 		if err != nil {

@@ -22,6 +22,9 @@ func TestCloudWatch(t *testing.T) {
 	hist.Update(50)
 	hist.Update(123)
 	registry.Add("Test", hist)
-	reporter := newCloudWatchReporter(time.Minute, "us-east-1", accessKey, secretKey, "", "Test", map[string]string{"Test": "go-metrics"}, map[string]float64{"p50": 0.5}, time.Second*10)
+	auth := func() (string, string, string) {
+		return accessKey, secretKey, ""
+	}
+	reporter := newCloudWatchReporter(time.Minute, "us-east-1", auth, "Test", map[string]string{"Test": "go-metrics"}, map[string]float64{"p50": 0.5}, time.Second*10)
 	reporter.Report(registry)
 }
