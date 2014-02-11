@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Meter is the combination of three EWMA metrics: 1 min, 5 min, and 15 min.
 type Meter struct {
 	count          uint64
 	m1Rate         *EWMA
@@ -20,6 +21,7 @@ type Meter struct {
 	tickerStopChan chan bool
 }
 
+// NewMeter returns a new instance of Meter
 func NewMeter() *Meter {
 	interval := time.Second * 5
 	m := Meter{
@@ -66,6 +68,7 @@ func (m *Meter) Stop() {
 	}
 }
 
+// Update increments the EWMA metrics.
 func (m *Meter) Update(delta uint64) {
 	atomic.AddUint64(&m.count, delta)
 	m.m1Rate.Update(delta)
@@ -73,24 +76,29 @@ func (m *Meter) Update(delta uint64) {
 	m.m15Rate.Update(delta)
 }
 
+// Count returns the number of values added.
 func (m *Meter) Count() uint64 {
 	return atomic.LoadUint64(&m.count)
 }
 
+// MeanRate returns the average rate
 func (m *Meter) MeanRate() float64 {
 	tdelta := time.Now().Sub(m.startTime)
 	count := m.Count()
 	return float64(count) / tdelta.Seconds()
 }
 
+// OneMinuteRate returns the 1 minute EWMA rate
 func (m *Meter) OneMinuteRate() float64 {
 	return m.m1Rate.Rate()
 }
 
+// FiveMinuteRate returns the 5 minute EWMA rate
 func (m *Meter) FiveMinuteRate() float64 {
 	return m.m5Rate.Rate()
 }
 
+// FifteenMinuteRate returns the 15 minute EWMA rate
 func (m *Meter) FifteenMinuteRate() float64 {
 	return m.m15Rate.Rate()
 }

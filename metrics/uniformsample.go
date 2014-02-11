@@ -14,37 +14,37 @@ type uniformSample struct {
 	count         int
 }
 
-// A random sample of a stream. Uses Vitter's Algorithm R to produce a
-// statistically representative sample.
+// NewUniformSample returns a sample randomly selects from a stream. Uses Vitter's
+// Algorithm R to produce a statistically representative sample.
 //
 // http://www.cs.umd.edu/~samir/498/vitter.pdf - Random Sampling with a Reservoir
 func NewUniformSample(reservoirSize int) Sample {
 	return &uniformSample{reservoirSize, make([]int64, reservoirSize), 0}
 }
 
-func (self *uniformSample) Clear() {
-	self.count = 0
+func (sample *uniformSample) Clear() {
+	sample.count = 0
 }
 
-func (self *uniformSample) Len() int {
-	if self.count < self.reservoirSize {
-		return self.count
+func (sample *uniformSample) Len() int {
+	if sample.count < sample.reservoirSize {
+		return sample.count
 	}
-	return self.reservoirSize
+	return sample.reservoirSize
 }
 
-func (self *uniformSample) Update(value int64) {
-	self.count++
-	if self.count <= self.reservoirSize {
-		self.values[self.count-1] = value
+func (sample *uniformSample) Update(value int64) {
+	sample.count++
+	if sample.count <= sample.reservoirSize {
+		sample.values[sample.count-1] = value
 	} else {
-		r := int(rand.Float64() * float64(self.count))
-		if r < self.reservoirSize {
-			self.values[r] = value
+		r := int(rand.Float64() * float64(sample.count))
+		if r < sample.reservoirSize {
+			sample.values[r] = value
 		}
 	}
 }
 
-func (self *uniformSample) Values() []int64 {
-	return self.values[:minInt(self.count, self.reservoirSize)]
+func (sample *uniformSample) Values() []int64 {
+	return sample.values[:minInt(sample.count, sample.reservoirSize)]
 }

@@ -17,6 +17,7 @@ type variance struct {
 	s float64
 }
 
+// Distribution tracks the min, max, sum, count, and variance/stddev of a set of values.
 type Distribution struct {
 	count    uint64
 	sum      int64
@@ -25,6 +26,7 @@ type Distribution struct {
 	variance unsafe.Pointer // pointer to variance struct
 }
 
+// NewDistribution returns a new instance of a Distribution
 func NewDistribution() *Distribution {
 	return &Distribution{
 		min:      math.MaxInt64,
@@ -38,6 +40,7 @@ func (d *Distribution) String() string {
 		d.Count(), d.Sum(), d.Min(), d.Max(), strconv.FormatFloat(d.StdDev(), 'g', -1, 64))
 }
 
+// Clear the distribution to its initial empty state.
 func (d *Distribution) Clear() {
 	atomic.StoreUint64(&d.count, 0)
 	atomic.StoreInt64(&d.sum, 0)
@@ -46,6 +49,7 @@ func (d *Distribution) Clear() {
 	atomic.StorePointer(&d.variance, unsafe.Pointer(&variance{-1, 0}))
 }
 
+// Update inserts a new data point
 func (d *Distribution) Update(value int64) {
 	atomic.AddUint64(&d.count, 1)
 	atomic.AddInt64(&d.sum, value)
@@ -80,26 +84,32 @@ func (d *Distribution) Update(value int64) {
 	}
 }
 
+// Count returns the number of data points
 func (d *Distribution) Count() uint64 {
 	return atomic.LoadUint64(&d.count)
 }
 
+// Sum returns the sum of all data points
 func (d *Distribution) Sum() int64 {
 	return atomic.LoadInt64(&d.sum)
 }
 
+// Min returns the minimum value of all data points
 func (d *Distribution) Min() int64 {
 	return atomic.LoadInt64(&d.min)
 }
 
+// Max returns the maximum value of all data points
 func (d *Distribution) Max() int64 {
 	return atomic.LoadInt64(&d.max)
 }
 
+// Mean returns the average of all of all data points
 func (d *Distribution) Mean() int64 {
 	return atomic.LoadInt64(&d.sum) / int64(atomic.LoadUint64(&d.count))
 }
 
+// Variance returns the variance of all data points
 func (d *Distribution) Variance() float64 {
 	count := atomic.LoadUint64(&d.count)
 	if count <= 1 {
@@ -109,6 +119,7 @@ func (d *Distribution) Variance() float64 {
 	return v.s / float64(count-1)
 }
 
+// StdDev returns the standard deviation of all data points
 func (d *Distribution) StdDev() float64 {
 	return math.Sqrt(d.Variance())
 }

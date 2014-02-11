@@ -41,7 +41,7 @@ type mpHistogram struct {
 	mutex      sync.RWMutex
 }
 
-// An implemenation of the Munro-Paterson approximate histogram algorithm adapted from:
+// NewMunroPatersonHistogram returns an implemenation of the Munro-Paterson approximate histogram algorithm adapted from:
 // https://github.com/twitter/commons/blob/master/src/java/com/twitter/common/stats/ApproximateHistogram.java
 // http://szl.googlecode.com/svn-history/r36/trunk/src/emitters/szlquantile.cc
 func NewMunroPatersonHistogram(bufSize, maxDepth int) Histogram {
@@ -78,7 +78,7 @@ func NewMunroPatersonHistogramWithPrecision(p Precision) Histogram {
 }
 
 func (mp *mpHistogram) String() string {
-	return histogramToJson(mp, DefaultPercentiles, DefaultPercentileNames)
+	return histogramToJSON(mp, DefaultPercentiles, DefaultPercentileNames)
 }
 
 func (mp *mpHistogram) Clear() {

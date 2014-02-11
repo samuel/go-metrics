@@ -62,7 +62,10 @@ func TestHistogramAccuracy(t *testing.T) {
 	count := 1000000
 	values := int64Slice(make([]int64, count))
 	for i := 0; i < count; i++ {
-		v := rand.Int63n(1000000)
+		v := int64(rand.NormFloat64()*5000 + 100000)
+		if v < 0 {
+			v = 0
+		}
 		h1.Update(v)
 		h2.Update(v)
 		h3.Update(v)

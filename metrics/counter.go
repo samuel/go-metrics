@@ -9,8 +9,10 @@ import (
 	"sync/atomic"
 )
 
+// CounterValue is used for stats reporting to identify the value as a counter rather than a gauge.
 type CounterValue int64
 
+// Counter is the interface for a counter metric.
 type Counter interface {
 	Inc(delta int64)
 	Count() int64
@@ -19,6 +21,7 @@ type Counter interface {
 
 type atomicCounter int64
 
+// NewCounter returns a counter implemented as an atomic int64.
 func NewCounter() Counter {
 	c := atomicCounter(int64(0))
 	return &c

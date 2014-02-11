@@ -160,7 +160,7 @@ func TestMPSmallestIndexFinder(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		j := hist.smallest(3, 0, hist.indices)
 		idx := hist.indices[j]
-		hist.indices[j] += 1
+		hist.indices[j]++
 		if int64(i) != hist.buffer[j][idx] {
 			t.Fatalf("mp.smallest failed 1")
 		}
@@ -175,7 +175,7 @@ func TestMPSmallestIndexFinder(t *testing.T) {
 	for i := 1; i <= 2*b; i++ {
 		j := hist.smallest(b, b, hist.indices)
 		idx := hist.indices[j]
-		hist.indices[j] += 1
+		hist.indices[j]++
 		if int64(i) != hist.buffer[j][idx] {
 			t.Fatalf("mp.smallest failed 2")
 		}
@@ -188,7 +188,7 @@ func TestMPSmallestIndexFinder(t *testing.T) {
 	for i := 2; i <= 2*b+1; i += 2 {
 		j := hist.smallest(1, 0, hist.indices)
 		idx := hist.indices[j]
-		hist.indices[j] += 1
+		hist.indices[j]++
 		if int64(i) != hist.buffer[j][idx] {
 			t.Fatalf("mp.smallest failed 3")
 		}
@@ -196,7 +196,7 @@ func TestMPSmallestIndexFinder(t *testing.T) {
 
 	j := hist.smallest(1, 0, hist.indices)
 	idx := hist.indices[j]
-	hist.indices[j] += 1
+	hist.indices[j]++
 	if int64(2*b+1) != hist.buffer[j][idx] {
 		t.Fatalf("mp.smallest failed 4")
 	}

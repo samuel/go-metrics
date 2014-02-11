@@ -44,11 +44,11 @@ type histogramValues struct {
 
 // Return a JSON encoded version of the Histgram output
 func (e *HistogramExport) String() string {
-	return histogramToJson(e.Histogram, e.Percentiles, e.PercentileNames)
+	return histogramToJSON(e.Histogram, e.Percentiles, e.PercentileNames)
 }
 
 // Return a JSON encoded version of the Histgram output
-func histogramToJson(h Histogram, percentiles []float64, percentileNames []string) string {
+func histogramToJSON(h Histogram, percentiles []float64, percentileNames []string) string {
 	b := &bytes.Buffer{}
 	fmt.Fprintf(b, "{\"count\":%d,\"sum\":%d,\"min\":%d,\"max\":%d,\"mean\":%s",
 		h.Count(), h.Sum(), h.Min(), h.Max(), strconv.FormatFloat(h.Mean(), 'g', -1, 64))

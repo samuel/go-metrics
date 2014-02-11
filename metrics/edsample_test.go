@@ -30,8 +30,8 @@ func TestEDSampleSizes(t *testing.T) {
 		for i := 0; i < data.populationSize; i++ {
 			sample.Update(int64(i))
 		}
-		expected_size := minInt(data.reservoirSize, data.populationSize)
-		if sample.Len() != expected_size {
+		expectedSize := minInt(data.reservoirSize, data.populationSize)
+		if sample.Len() != expectedSize {
 			t.Errorf("Size of sample should be %d but is %d", data.reservoirSize, sample.Len())
 		}
 		// Should only have elements from the population

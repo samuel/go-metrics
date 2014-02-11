@@ -83,10 +83,10 @@ type exponentiallyDecayingSample struct {
 	now           func() time.Time
 }
 
-// An exponentially-decaying random sample of values. Uses Cormode et
-// al's forward-decaying priority reservoir sampling method to produce a
-// statistically representative sample, exponentially biased towards newer
-// entries.
+// NewExponentiallyDecayingSample returns an exponentially-decaying random
+// sample of values. Uses Cormode et al's forward-decaying priority reservoir
+// sampling method to produce a statistically representative sample,
+// exponentially biased towards newer entries.
 //
 // http://www.research.att.com/people/Cormode_Graham/library/publications/CormodeShkapenyukSrivastavaXu09.pdf
 // Cormode et al. Forward Decay: A Practical Time Decay Model for Streaming
@@ -96,6 +96,8 @@ func NewExponentiallyDecayingSample(reservoirSize int, alpha float64) Sample {
 	return NewExponentiallyDecayingSampleWithCustomTime(reservoirSize, alpha, time.Now)
 }
 
+// NewExponentiallyDecayingSampleWithCustomTime returns an exponentially-decaying random
+// sample of values using a custom time function.
 func NewExponentiallyDecayingSampleWithCustomTime(reservoirSize int, alpha float64, now func() time.Time) Sample {
 	eds := exponentiallyDecayingSample{
 		reservoirSize: reservoirSize,
@@ -107,50 +109,50 @@ func NewExponentiallyDecayingSampleWithCustomTime(reservoirSize int, alpha float
 	return &eds
 }
 
-func (self *exponentiallyDecayingSample) Clear() {
-	self.values.Clear()
-	heap.Init(self.values)
-	self.count = 0
-	self.startTime = self.now()
-	self.nextScaleTime = self.startTime.Add(edRescaleThreshold)
+func (sample *exponentiallyDecayingSample) Clear() {
+	sample.values.Clear()
+	heap.Init(sample.values)
+	sample.count = 0
+	sample.startTime = sample.now()
+	sample.nextScaleTime = sample.startTime.Add(edRescaleThreshold)
 }
 
-func (self *exponentiallyDecayingSample) Len() int {
-	if self.count < self.reservoirSize {
-		return self.count
+func (sample *exponentiallyDecayingSample) Len() int {
+	if sample.count < sample.reservoirSize {
+		return sample.count
 	}
-	return self.reservoirSize
+	return sample.reservoirSize
 }
 
-func (self *exponentiallyDecayingSample) Values() []int64 {
-	return self.values.Values()
+func (sample *exponentiallyDecayingSample) Values() []int64 {
+	return sample.values.Values()
 }
 
-func (self *exponentiallyDecayingSample) Update(value int64) {
-	timestamp := self.now()
-	if timestamp.After(self.nextScaleTime) {
-		self.rescale(timestamp)
+func (sample *exponentiallyDecayingSample) Update(value int64) {
+	timestamp := sample.now()
+	if timestamp.After(sample.nextScaleTime) {
+		sample.rescale(timestamp)
 	}
 
-	timestamp = self.now()
-	priority := self.weight(timestamp.Sub(self.startTime)) / rand.Float64()
-	self.count++
-	if self.count <= self.reservoirSize {
-		heap.Push(self.values, priorityValue{priority, value})
+	timestamp = sample.now()
+	priority := sample.weight(timestamp.Sub(sample.startTime)) / rand.Float64()
+	sample.count++
+	if sample.count <= sample.reservoirSize {
+		heap.Push(sample.values, priorityValue{priority, value})
 	} else {
-		if first := self.values.Get(0); first.priority < priority {
+		if first := sample.values.Get(0); first.priority < priority {
 			// Once Go 1.2 is release
-			// self.values.samples[0] = priorityValue{priority, value}
-			// heap.Fix(self.values, 0)
+			// sample.values.samples[0] = priorityValue{priority, value}
+			// heap.Fix(sample.values, 0)
 
-			heap.Pop(self.values)
-			heap.Push(self.values, priorityValue{priority, value})
+			heap.Pop(sample.values)
+			heap.Push(sample.values, priorityValue{priority, value})
 		}
 	}
 }
 
-func (self *exponentiallyDecayingSample) weight(delta time.Duration) float64 {
-	return math.Exp(self.alpha * delta.Seconds())
+func (sample *exponentiallyDecayingSample) weight(delta time.Duration) float64 {
+	return math.Exp(sample.alpha * delta.Seconds())
 }
 
 /*
@@ -172,11 +174,11 @@ and obtain the correct value as if we had instead computed relative to a new
 landmark L′ (and then use this new L′ at query time). This can be done with
 a linear pass over whatever data structure is being used.
 */
-func (self *exponentiallyDecayingSample) rescale(now time.Time) {
-	self.nextScaleTime = now.Add(edRescaleThreshold)
-	oldStartTime := self.startTime
-	self.startTime = now
-	scale := math.Exp(-self.alpha * self.startTime.Sub(oldStartTime).Seconds())
-	self.values.ScalePriority(scale)
-	self.count = self.values.Len()
+func (sample *exponentiallyDecayingSample) rescale(now time.Time) {
+	sample.nextScaleTime = now.Add(edRescaleThreshold)
+	oldStartTime := sample.startTime
+	sample.startTime = now
+	scale := math.Exp(-sample.alpha * sample.startTime.Sub(oldStartTime).Seconds())
+	sample.values.ScalePriority(scale)
+	sample.count = sample.values.Len()
 }

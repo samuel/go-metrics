@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// FloatGaugeFunc is used for stats reporting to identify the value as a floating point gauge
 type FloatGaugeFunc func() float64
 
 type EWMAGauge struct {

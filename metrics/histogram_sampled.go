@@ -30,21 +30,19 @@ func NewSampledHistogram(sample Sample) Histogram {
 	return &sampledHistogram{sample: sample}
 }
 
-/*
-  Uses an exponentially decaying sample of 1028 elements, which offers
-  a 99.9% confidence level with a 5% margin of error assuming a normal
-  distribution, and an alpha factor of 0.015, which heavily biases
-  the sample to the past 5 minutes of measurements.
-*/
+// NewBiasedHistogram returns a histogram that uses an exponentially
+// decaying sample of 1028 elements, which offers
+// a 99.9% confidence level with a 5% margin of error assuming a normal
+// distribution, and an alpha factor of 0.015, which heavily biases
+// the sample to the past 5 minutes of measurements.
 func NewBiasedHistogram() Histogram {
 	return NewSampledHistogram(NewExponentiallyDecayingSample(1028, 0.015))
 }
 
-/*
-  Uses a uniform sample of 1028 elements, which offers a 99.9%
-  confidence level with a 5% margin of error assuming a normal
-  distribution.
-*/
+// NewUnbiasedHistogram returns a histogram that uses a uniform sample
+// of 1028 elements, which offers a 99.9%
+// confidence level with a 5% margin of error assuming a normal
+// distribution.
 func NewUnbiasedHistogram() Histogram {
 	return NewSampledHistogram(NewUniformSample(1028))
 }
@@ -151,5 +149,5 @@ func (h *sampledHistogram) SampleValues() []int64 {
 }
 
 func (h *sampledHistogram) String() string {
-	return histogramToJson(h, DefaultPercentiles, DefaultPercentileNames)
+	return histogramToJSON(h, DefaultPercentiles, DefaultPercentileNames)
 }

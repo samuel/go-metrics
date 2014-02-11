@@ -12,15 +12,15 @@ import (
 )
 
 var (
-	// 5 second interval, 60 seconds per minute, 1 minute
+	// M1Alpha represents 1 minute at a 5 second interval
 	M1Alpha = 1 - math.Exp(-5.0/60/1)
-	// 5 second interval, 60 seconds per minute, 5 minutes
+	// M5Alpha represents 5 minutes at a 5 second interval
 	M5Alpha = 1 - math.Exp(-5.0/60/5)
-	// 5 second interval, 60 seconds per minute, 15 minutes
+	// M15Alpha represents 15 minutes at a 5 second interval
 	M15Alpha = 1 - math.Exp(-5.0/60/15)
 )
 
-// An exponentially-weighted moving average.
+// EWMA is an exponentially-weighted moving average.
 //
 // http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf - UNIX Load Average Part 1: How It Works
 // http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf - UNIX Load Average Part 2: Not Your Average Average
@@ -34,6 +34,7 @@ type EWMA struct {
 	tickerStopChan chan bool
 }
 
+// NewEWMA returns a new exponentially-weighte moving average.
 func NewEWMA(interval time.Duration, alpha float64) *EWMA {
 	ewma := &EWMA{
 		interval:    interval,
@@ -48,12 +49,12 @@ func (ewma *EWMA) String() string {
 	return strconv.FormatFloat(rate, 'g', -1, 64)
 }
 
-// Increment the uncounted value
+// Update increments the uncounted value
 func (ewma *EWMA) Update(value uint64) {
 	atomic.AddUint64(&ewma.uncounted, value)
 }
 
-// Return the rate
+// Rate retusnt the current rate
 func (ewma *EWMA) Rate() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&ewma.rate))
 }

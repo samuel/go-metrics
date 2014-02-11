@@ -25,8 +25,8 @@ type bucketedHistogram struct {
 	lock          sync.RWMutex
 }
 
-// Given an error (+/-), compute all the bucket values from 1 until we run out of positive
-// 64-bit ints. The error should be in percent, between 0.0 and 1.0.
+// MakeBucketsForError compute all the bucket values from 1 until we run out of positive 64-bit ints
+// for the given an error (+/-). The error should be in percent, between 0.0 and 1.0.
 //
 // Each bucket's value will be the midpoint of an error range to the edge of the bucket in each
 // direction, so for example, given a 5% error range (the default), the bucket with value N will
@@ -65,7 +65,7 @@ func MakeBucketsForError(error float64) []int64 {
 	return bucketOffsets
 }
 
-// A histogram that uses a fixed set of buckets for ranges of values.
+// NewBucketedHistogram returns a histogram that uses a fixed set of buckets for ranges of values.
 // This is an implementation of the Histogram class from Ostrich.
 // https://github.com/twitter/ostrich/blob/master/src/main/scala/com/twitter/ostrich/stats/Histogram.scala
 func NewBucketedHistogram(bucketOffsets []int64) Histogram {
@@ -77,7 +77,7 @@ func NewBucketedHistogram(bucketOffsets []int64) Histogram {
 	}
 }
 
-// Create a bucketed histogram with an error of 5%
+// NewDefaultBucketedHistogram returns a bucketed histogram with an error of 5%
 func NewDefaultBucketedHistogram() Histogram {
 	return NewBucketedHistogram(MakeBucketsForError(0.05))
 }
@@ -189,5 +189,5 @@ func (h *bucketedHistogram) Percentiles(percentiles []float64) []int64 {
 }
 
 func (h *bucketedHistogram) String() string {
-	return histogramToJson(h, DefaultPercentiles, DefaultPercentileNames)
+	return histogramToJSON(h, DefaultPercentiles, DefaultPercentileNames)
 }
