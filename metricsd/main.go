@@ -25,17 +25,17 @@ import (
 )
 
 const (
-	REPORT_INTERVAL = 60e9 // nanoseconds
+	reportInterval = 60e9 // nanoseconds
 )
 
 var (
-	f_httpaddr = flag.String("h", "0.0.0.0:5251", "address of HTTP server")
-	f_laddr    = flag.String("l", "0.0.0.0:5252", "the address to listen on")
-	f_perc     = flag.String("p", "0.90,0.99,0.999", "comma separated list of percentiles to record")
-	f_graphite = flag.String("g", "", "host:port for Graphite's Carbon")
-	f_username = flag.String("u", "", "librato metrics username")
-	f_token    = flag.String("t", "", "librato metrics token")
-	f_stathat  = flag.String("s", "", "StatHat email")
+	flagHTTPAddr        = flag.String("h", "0.0.0.0:5251", "address of HTTP server")
+	flagListenAddr      = flag.String("l", "0.0.0.0:5252", "the address to listen on")
+	flagPercentiles     = flag.String("p", "0.90,0.99,0.999", "comma separated list of percentiles to record")
+	flagGraphite        = flag.String("g", "", "host:port for Graphite's Carbon")
+	flagLibratoUsername = flag.String("u", "", "librato metrics username")
+	flagLibratoToken    = flag.String("t", "", "librato metrics token")
+	flagStatHatEmail    = flag.String("s", "", "StatHat email")
 )
 
 var (
@@ -67,9 +67,9 @@ func init() {
 func main() {
 	parseFlags()
 
-	if *f_httpaddr != "" {
+	if *flagHTTPAddr != "" {
 		go func() {
-			log.Fatal(http.ListenAndServe(*f_httpaddr, nil))
+			log.Fatal(http.ListenAndServe(*flagHTTPAddr, nil))
 		}()
 	}
 
@@ -79,10 +79,10 @@ func main() {
 
 func parseFlags() {
 	flag.Parse()
-	if *f_stathat == "" && (*f_username == "" || *f_token == "") && *f_graphite == "" {
+	if *flagStatHatEmail == "" && (*flagLibratoUsername == "" || *flagLibratoToken == "") && *flagGraphite == "" {
 		log.Fatal("Either StatHat email, Librato username & token, or Graphite/Carbon required")
 	}
-	for _, s := range strings.Split(*f_perc, ",") {
+	for _, s := range strings.Split(*flagPercentiles, ",") {
 		p, err := strconv.ParseFloat(s, 64)
 		switch {
 		case err != nil:
@@ -96,7 +96,7 @@ func parseFlags() {
 }
 
 func listen() *net.UDPConn {
-	addr, err := net.ResolveUDPAddr("udp", *f_laddr)
+	addr, err := net.ResolveUDPAddr("udp", *flagListenAddr)
 	l, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		log.Fatal(err)
@@ -147,17 +147,17 @@ func updateHistogram(name string, value int64) {
 }
 
 func reporter() {
-	var met *librato.Metrics = nil
-	if *f_username != "" && *f_token != "" {
-		met = &librato.Metrics{Username: *f_username, Token: *f_token}
+	var met *librato.Client
+	if *flagLibratoUsername != "" && *flagLibratoToken != "" {
+		met = &librato.Client{Username: *flagLibratoUsername, Token: *flagLibratoToken}
 	}
-	tc := time.Tick(REPORT_INTERVAL)
+	tc := time.Tick(reportInterval)
 	for {
 		ts := <-tc
 		counters, histograms := swapMetrics()
 
 		if len(counters) > 0 || len(histograms) > 0 {
-			if *f_graphite != "" {
+			if *flagGraphite != "" {
 				startTime := time.Now()
 				if err := sendMetricsGraphite(ts, counters, histograms); err != nil {
 					log.Printf(err.Error())
@@ -173,7 +173,7 @@ func reporter() {
 				statLibratoLatency.Update(time.Now().Sub(startTime).Nanoseconds() / 1e3)
 			}
 
-			if *f_stathat != "" {
+			if *flagStatHatEmail != "" {
 				startTime := time.Now()
 				if err := sendMetricsStatHat(ts, counters, histograms); err != nil {
 					log.Printf(err.Error())
@@ -198,7 +198,7 @@ func swapMetrics() (oldcounters map[string]int64, oldhistograms map[string]metri
 }
 
 func sendMetricsGraphite(ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
-	conn, err := net.Dial("tcp", *f_graphite)
+	conn, err := net.Dial("tcp", *flagGraphite)
 	if err != nil {
 		return err
 	}
@@ -219,8 +219,8 @@ func sendMetricsGraphite(ts time.Time, counters map[string]int64, histograms map
 	return nil
 }
 
-func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
-	metrics := librato.MetricsFormat{}
+func sendMetricsLibrato(met *librato.Client, ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
+	var metrics librato.Metrics
 	for name, value := range counters {
 		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: float64(value)})
 	}
@@ -237,16 +237,16 @@ func sendMetricsLibrato(met *librato.Metrics, ts time.Time, counters map[string]
 
 func sendMetricsStatHat(ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {
 	for name, value := range counters {
-		if err := stathat.PostEZCount(name, *f_stathat, int(value)); err != nil {
+		if err := stathat.PostEZCount(name, *flagStatHatEmail, int(value)); err != nil {
 			return err
 		}
 	}
 	for name, hist := range histograms {
-		if err := stathat.PostEZValue(name, *f_stathat, hist.Mean()); err != nil {
+		if err := stathat.PostEZValue(name, *flagStatHatEmail, hist.Mean()); err != nil {
 			return err
 		}
 		for i, p := range hist.Percentiles(percentiles) {
-			if err := stathat.PostEZValue(fmt.Sprintf("%s.%s", name, percentileNames[i]), *f_stathat, float64(p)); err != nil {
+			if err := stathat.PostEZValue(fmt.Sprintf("%s.%s", name, percentileNames[i]), *flagStatHatEmail, float64(p)); err != nil {
 				return err
 			}
 		}
