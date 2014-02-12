@@ -15,7 +15,7 @@ import (
 
 type libratoReporter struct {
 	source          string
-	lib             *librato.Metrics
+	client          *librato.Client
 	percentiles     []float64
 	percentileNames []string
 	counterCache    *counterDeltaCache
@@ -36,7 +36,7 @@ func NewLibratoReporter(registry metrics.Registry, interval time.Duration, usern
 
 	lr := &libratoReporter{
 		source:          source,
-		lib:             &librato.Metrics{Username: username, Token: token},
+		client:          &librato.Client{Username: username, Token: token},
 		percentiles:     per,
 		percentileNames: perNames,
 		counterCache:    &counterDeltaCache{},
@@ -45,7 +45,7 @@ func NewLibratoReporter(registry metrics.Registry, interval time.Duration, usern
 }
 
 func (r *libratoReporter) Report(registry metrics.Registry) {
-	mets := &librato.MetricsFormat{Source: r.source}
+	mets := &librato.Metrics{Source: r.source}
 	count := 0
 
 	registry.Do(func(name string, metric interface{}) error {
@@ -131,7 +131,7 @@ func (r *libratoReporter) Report(registry metrics.Registry) {
 	})
 
 	if count > 0 {
-		if err := r.lib.SendMetrics(mets); err != nil {
+		if err := r.client.SendMetrics(mets); err != nil {
 			log.Printf("ERR librato.SendMetrics: %+v", err)
 		}
 	}
