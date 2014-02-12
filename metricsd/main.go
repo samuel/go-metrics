@@ -232,7 +232,7 @@ func sendMetricsLibrato(met *librato.Client, ts time.Time, counters map[string]i
 		}
 	}
 
-	return met.SendMetrics(&metrics)
+	return met.PostMetrics(&metrics)
 }
 
 func sendMetricsStatHat(ts time.Time, counters map[string]int64, histograms map[string]metrics.Histogram) error {

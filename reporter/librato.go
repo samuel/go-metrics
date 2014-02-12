@@ -131,8 +131,8 @@ func (r *libratoReporter) Report(registry metrics.Registry) {
 	})
 
 	if count > 0 {
-		if err := r.client.SendMetrics(mets); err != nil {
-			log.Printf("ERR librato.SendMetrics: %+v", err)
+		if err := r.client.PostMetrics(mets); err != nil {
+			log.Printf("ERR librato.PostMetrics: %+v", err)
 		}
 	}
 }
