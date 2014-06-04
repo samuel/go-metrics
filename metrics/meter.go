@@ -40,6 +40,14 @@ func (m *Meter) String() string {
 		m.m1Rate.String(), m.m5Rate.String(), m.m15Rate.String())
 }
 
+func (m *Meter) MarshalJSON() ([]byte, error) {
+	return []byte(m.String()), nil
+}
+
+func (m *Meter) MarshalText() ([]byte, error) {
+	return m.MarshalJSON()
+}
+
 func (m *Meter) tickWatcher() {
 watcher:
 	for {

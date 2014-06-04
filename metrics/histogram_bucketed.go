@@ -191,3 +191,11 @@ func (h *bucketedHistogram) Percentiles(percentiles []float64) []int64 {
 func (h *bucketedHistogram) String() string {
 	return histogramToJSON(h, DefaultPercentiles, DefaultPercentileNames)
 }
+
+func (h *bucketedHistogram) MarshalJSON() ([]byte, error) {
+	return []byte(h.String()), nil
+}
+
+func (h *bucketedHistogram) MarshalText() ([]byte, error) {
+	return h.MarshalJSON()
+}

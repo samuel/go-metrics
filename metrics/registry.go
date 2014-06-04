@@ -5,6 +5,10 @@
 package metrics
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
 	"regexp"
 	"sync"
 )
@@ -130,4 +134,27 @@ func do(scope string, metrics map[string]interface{}, f Doer) error {
 		}
 	}
 	return nil
+}
+
+func RegistryHandler(reg Registry) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		fmt.Fprintf(w, "{\n")
+		first := true
+		enc := json.NewEncoder(w)
+		reg.Do(func(name string, metric interface{}) error {
+			if !first {
+				fmt.Fprintf(w, ",")
+			}
+			first = false
+			fmt.Fprintf(w, "%q: ", name)
+			// Ignore any error since there's not much that can
+			// be done at this point since the headers have been sent
+			if err := enc.Encode(metric); err != nil {
+				log.Printf("metrics: failed to encode metric of type %T: %s", err.Error())
+			}
+			return nil
+		})
+		fmt.Fprintf(w, "\n}\n")
+	})
 }

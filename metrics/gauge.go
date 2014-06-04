@@ -45,3 +45,11 @@ func (c *atomicInt64Gauge) Value() int64 {
 func (c *atomicInt64Gauge) String() string {
 	return strconv.FormatInt(c.Value(), 10)
 }
+
+func (c *atomicInt64Gauge) MarshalJSON() ([]byte, error) {
+	return []byte(c.String()), nil
+}
+
+func (c *atomicInt64Gauge) MarshalText() ([]byte, error) {
+	return c.MarshalJSON()
+}

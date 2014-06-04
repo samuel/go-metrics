@@ -38,3 +38,11 @@ func (c *atomicCounter) Count() int64 {
 func (c *atomicCounter) String() string {
 	return strconv.FormatInt(c.Count(), 10)
 }
+
+func (c *atomicCounter) MarshalJSON() ([]byte, error) {
+	return []byte(c.String()), nil
+}
+
+func (c *atomicCounter) MarshaText() ([]byte, error) {
+	return c.MarshalJSON()
+}

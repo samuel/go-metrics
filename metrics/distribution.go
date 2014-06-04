@@ -40,6 +40,14 @@ func (d *Distribution) String() string {
 		d.Count(), d.Sum(), d.Min(), d.Max(), strconv.FormatFloat(d.StdDev(), 'g', -1, 64))
 }
 
+func (d *Distribution) MarshalJSON() ([]byte, error) {
+	return []byte(d.String()), nil
+}
+
+func (d *Distribution) MarshalText() ([]byte, error) {
+	return d.MarshalJSON()
+}
+
 // Clear the distribution to its initial empty state.
 func (d *Distribution) Clear() {
 	atomic.StoreUint64(&d.count, 0)

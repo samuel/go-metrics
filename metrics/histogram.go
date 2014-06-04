@@ -47,6 +47,14 @@ func (e *HistogramExport) String() string {
 	return histogramToJSON(e.Histogram, e.Percentiles, e.PercentileNames)
 }
 
+func (e *HistogramExport) MarshalJSON() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+func (e *HistogramExport) MarshalText() ([]byte, error) {
+	return e.MarshalJSON()
+}
+
 // Return a JSON encoded version of the Histgram output
 func histogramToJSON(h Histogram, percentiles []float64, percentileNames []string) string {
 	b := &bytes.Buffer{}

@@ -5,7 +5,10 @@
 package metrics
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"regexp"
 	"testing"
@@ -66,5 +69,25 @@ func TestFilteredRegistry(t *testing.T) {
 	exp = map[string]string{"string": "x"}
 	if !reflect.DeepEqual(out, exp) {
 		t.Fatalf("filteredRegistry.Do should have returned %+v instead of %+v", exp, out)
+	}
+}
+
+func TestRegistryHandler(t *testing.T) {
+	r := NewRegistry()
+	r2 := r.Scope("test")
+	r.Add("num", 1)
+	r2.Add("foo", "bar")
+	r.Add("counter", NewCounter())
+
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	RegistryHandler(r).ServeHTTP(res, req)
+	if res.Code != 200 {
+		t.Fatalf("Expected response 200. Got %d", res.Code)
+	}
+	t.Logf("%s", res.Body.String())
+	var out map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
 	}
 }

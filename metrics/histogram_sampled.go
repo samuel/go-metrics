@@ -151,3 +151,11 @@ func (h *sampledHistogram) SampleValues() []int64 {
 func (h *sampledHistogram) String() string {
 	return histogramToJSON(h, DefaultPercentiles, DefaultPercentileNames)
 }
+
+func (h *sampledHistogram) MarshalJSON() ([]byte, error) {
+	return []byte(h.String()), nil
+}
+
+func (h *sampledHistogram) MarshalText() ([]byte, error) {
+	return h.MarshalJSON()
+}

@@ -81,6 +81,14 @@ func (mp *mpHistogram) String() string {
 	return histogramToJSON(mp, DefaultPercentiles, DefaultPercentileNames)
 }
 
+func (h *mpHistogram) MarshalJSON() ([]byte, error) {
+	return []byte(h.String()), nil
+}
+
+func (h *mpHistogram) MarshalText() ([]byte, error) {
+	return h.MarshalJSON()
+}
+
 func (mp *mpHistogram) Clear() {
 	mp.mutex.Lock()
 	mp.count = 0

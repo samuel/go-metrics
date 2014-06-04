@@ -36,73 +36,80 @@ type EWMA struct {
 
 // NewEWMA returns a new exponentially-weighte moving average.
 func NewEWMA(interval time.Duration, alpha float64) *EWMA {
-	ewma := &EWMA{
+	return &EWMA{
 		interval:    interval,
 		alpha:       alpha,
 		initialized: false,
 	}
-	return ewma
 }
 
-func (ewma *EWMA) String() string {
-	rate := ewma.Rate()
+func (e *EWMA) String() string {
+	rate := e.Rate()
 	return strconv.FormatFloat(rate, 'g', -1, 64)
 }
 
+func (e *EWMA) MarshalJSON() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+func (e *EWMA) MarshalText() ([]byte, error) {
+	return e.MarshalJSON()
+}
+
 // Update increments the uncounted value
-func (ewma *EWMA) Update(value uint64) {
-	atomic.AddUint64(&ewma.uncounted, value)
+func (e *EWMA) Update(value uint64) {
+	atomic.AddUint64(&e.uncounted, value)
 }
 
 // Rate retusnt the current rate
-func (ewma *EWMA) Rate() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&ewma.rate))
+func (e *EWMA) Rate() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&e.rate))
 }
 
 // Start the ticker
-func (ewma *EWMA) Start() {
-	if ewma.ticker == nil {
-		ewma.ticker = time.NewTicker(ewma.interval)
-		ewma.tickerStopChan = make(chan bool)
-		go ewma.tickWatcher()
+func (e *EWMA) Start() {
+	if e.ticker == nil {
+		e.ticker = time.NewTicker(e.interval)
+		e.tickerStopChan = make(chan bool)
+		go e.tickWatcher()
 	}
 }
 
 // Stop the ticker
-func (ewma *EWMA) Stop() {
-	if ewma.ticker != nil {
-		ewma.ticker.Stop()
-		close(ewma.tickerStopChan)
+func (e *EWMA) Stop() {
+	if e.ticker != nil {
+		e.ticker.Stop()
+		close(e.tickerStopChan)
 	}
 }
 
-func (ewma *EWMA) tickWatcher() {
+func (e *EWMA) tickWatcher() {
 watcher:
 	for {
 		select {
-		case _ = <-ewma.tickerStopChan:
+		case _ = <-e.tickerStopChan:
 			break watcher
-		case _ = <-ewma.ticker.C:
-			ewma.Tick()
+		case _ = <-e.ticker.C:
+			e.Tick()
 		}
 	}
-	ewma.ticker = nil
-	ewma.tickerStopChan = nil
+	e.ticker = nil
+	e.tickerStopChan = nil
 }
 
 // Tick the moving average - NOT thread safe
-func (ewma *EWMA) Tick() {
+func (e *EWMA) Tick() {
 	// Assume Tick is never called concurrently
-	count := atomic.LoadUint64(&ewma.uncounted)
+	count := atomic.LoadUint64(&e.uncounted)
 	// Subtract the old count since there is no atomic get-and-set
-	atomic.AddUint64(&ewma.uncounted, -count)
-	instantRate := float64(count) / ewma.interval.Seconds()
-	rate := ewma.Rate()
-	if ewma.initialized {
-		rate += ewma.alpha * (instantRate - rate)
+	atomic.AddUint64(&e.uncounted, -count)
+	instantRate := float64(count) / e.interval.Seconds()
+	rate := e.Rate()
+	if e.initialized {
+		rate += e.alpha * (instantRate - rate)
 	} else {
 		rate = instantRate
-		ewma.initialized = true
+		e.initialized = true
 	}
-	atomic.StoreUint64(&ewma.rate, math.Float64bits(rate))
+	atomic.StoreUint64(&e.rate, math.Float64bits(rate))
 }

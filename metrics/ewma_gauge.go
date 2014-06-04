@@ -39,6 +39,14 @@ func (e *EWMAGauge) String() string {
 	return strconv.FormatFloat(rate, 'g', -1, 64)
 }
 
+func (e *EWMAGauge) MarshalJSON() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+func (e *EWMAGauge) MarshalText() ([]byte, error) {
+	return e.MarshalJSON()
+}
+
 func (e *EWMAGauge) Mean() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&e.mean))
 }
