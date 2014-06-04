@@ -151,7 +151,7 @@ func RegistryHandler(reg Registry) http.Handler {
 			// Ignore any error since there's not much that can
 			// be done at this point since the headers have been sent
 			if err := enc.Encode(metric); err != nil {
-				log.Printf("metrics: failed to encode metric of type %T: %s", err.Error())
+				log.Printf("metrics: failed to encode metric of type %T: %s", metric, err.Error())
 			}
 			return nil
 		})
