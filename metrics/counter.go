@@ -10,33 +10,37 @@ import (
 )
 
 // CounterValue is used for stats reporting to identify the value as a counter rather than a gauge.
-type CounterValue int64
+type CounterValue uint64
 
 // Counter is the interface for a counter metric.
 type Counter interface {
-	Inc(delta int64)
-	Count() int64
+	Inc(delta uint64)
+	Count() uint64
 	String() string
 }
 
-type atomicCounter int64
+type atomicCounter uint64
 
 // NewCounter returns a counter implemented as an atomic int64.
 func NewCounter() Counter {
-	c := atomicCounter(int64(0))
+	c := atomicCounter(uint64(0))
 	return &c
 }
 
-func (c *atomicCounter) Inc(delta int64) {
-	atomic.AddInt64((*int64)(c), delta)
+func (c *atomicCounter) Inc(delta uint64) {
+	atomic.AddUint64((*uint64)(c), delta)
 }
 
-func (c *atomicCounter) Count() int64 {
-	return atomic.LoadInt64((*int64)(c))
+func (c *atomicCounter) Count() uint64 {
+	return atomic.LoadUint64((*uint64)(c))
+}
+
+func (c *atomicCounter) Reset() uint64 {
+	return atomic.SwapUint64((*uint64)(c), 0)
 }
 
 func (c *atomicCounter) String() string {
-	return strconv.FormatInt(c.Count(), 10)
+	return strconv.FormatUint(c.Count(), 10)
 }
 
 func (c *atomicCounter) MarshalJSON() ([]byte, error) {

@@ -38,6 +38,10 @@ func (c *atomicInt64Gauge) Set(value int64) {
 	atomic.StoreInt64((*int64)(c), value)
 }
 
+func (c *atomicInt64Gauge) Reset() int64 {
+	return atomic.SwapInt64((*int64)(c), 0)
+}
+
 func (c *atomicInt64Gauge) Value() int64 {
 	return atomic.LoadInt64((*int64)(c))
 }

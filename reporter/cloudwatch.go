@@ -32,7 +32,7 @@ type cloudWatchMetric struct {
 		min         float64
 		max         float64
 		sum         float64
-		sampleCount int64
+		sampleCount uint64
 	}
 }
 
@@ -91,7 +91,7 @@ func (r *cloudWatchReporter) Report(registry metrics.Registry) {
 		name = strings.Replace(name, "/", ".", -1)
 		switch m := metric.(type) {
 		case metrics.CounterValue:
-			mets[name] = cloudWatchMetric{value: r.counterCache.delta(name, int64(m))}
+			mets[name] = cloudWatchMetric{value: r.counterCache.delta(name, uint64(m))}
 		case metrics.GaugeValue:
 			mets[name] = cloudWatchMetric{value: int64(m)}
 		case metrics.IntegerGauge:
@@ -109,9 +109,9 @@ func (r *cloudWatchReporter) Report(registry metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				deltaCount := r.counterCache.delta(name+".count", int64(count))
+				deltaCount := r.counterCache.delta(name+".count", count)
 				if deltaCount > 0 {
-					deltaSum := r.counterCache.delta(name+".sum", m.Sum())
+					deltaSum := r.counterCache.delta(name+".sum", uint64(m.Sum()))
 					w := cloudWatchMetric{}
 					w.stats.max = float64(deltaSum) / float64(deltaCount)
 					w.stats.min = float64(deltaSum) / float64(deltaCount)
@@ -152,7 +152,7 @@ func (r *cloudWatchReporter) Report(registry metrics.Registry) {
 				}
 			} else if m.stats.sampleCount > 0 {
 				params.Set(prefix+"StatisticValues.Sum", strconv.FormatFloat(m.stats.sum, 'E', 10, 64))
-				params.Set(prefix+"StatisticValues.SampleCount", strconv.FormatInt(m.stats.sampleCount, 10))
+				params.Set(prefix+"StatisticValues.SampleCount", strconv.FormatUint(m.stats.sampleCount, 10))
 				params.Set(prefix+"StatisticValues.Minimum", strconv.FormatFloat(m.stats.min, 'E', 10, 64))
 				params.Set(prefix+"StatisticValues.Maximum", strconv.FormatFloat(m.stats.max, 'E', 10, 64))
 			} else {

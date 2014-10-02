@@ -105,9 +105,9 @@ func (r *libratoReporter) Report(registry metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				deltaCount := r.counterCache.delta(name+".count", int64(count))
+				deltaCount := r.counterCache.delta(name+".count", count)
 				if deltaCount > 0 {
-					deltaSum := r.counterCache.delta(name+".sum", m.Sum())
+					deltaSum := r.counterCache.delta(name+".sum", uint64(m.Sum()))
 					mets.Gauges = append(mets.Gauges,
 						librato.Gauge{
 							Name:  name,

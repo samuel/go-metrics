@@ -97,12 +97,10 @@ watcher:
 	e.tickerStopChan = nil
 }
 
-// Tick the moving average - NOT thread safe
+// Tick the moving average
 func (e *EWMA) Tick() {
 	// Assume Tick is never called concurrently
-	count := atomic.LoadUint64(&e.uncounted)
-	// Subtract the old count since there is no atomic get-and-set
-	atomic.AddUint64(&e.uncounted, -count)
+	count := atomic.SwapUint64(&e.uncounted, 0)
 	instantRate := float64(count) / e.interval.Seconds()
 	rate := e.Rate()
 	if e.initialized {

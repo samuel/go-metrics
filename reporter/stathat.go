@@ -49,7 +49,7 @@ func (r *statHatReporter) Report(registry metrics.Registry) {
 		name = strings.Replace(name, "/", ".", -1)
 		switch m := metric.(type) {
 		case metrics.CounterValue:
-			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, int64(m)))); err != nil {
+			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, uint64(m)))); err != nil {
 				log.Printf("ERR stathat.PostEZCount: %+v", err)
 			}
 		case metrics.GaugeValue:
@@ -85,9 +85,9 @@ func (r *statHatReporter) Report(registry metrics.Registry) {
 		case metrics.Histogram:
 			count := m.Count()
 			if count > 0 {
-				deltaCount := r.counterCache.delta(name+".count", int64(count))
+				deltaCount := r.counterCache.delta(name+".count", count)
 				if deltaCount > 0 {
-					deltaSum := r.counterCache.delta(name+".sum", m.Sum())
+					deltaSum := r.counterCache.delta(name+".sum", uint64(m.Sum()))
 					if err := stathat.PostEZValue(name+".mean", r.email, float64(deltaSum)/float64(deltaCount)); err != nil {
 						log.Printf("ERR stathat.PostEZValue: %+v", err)
 					}
