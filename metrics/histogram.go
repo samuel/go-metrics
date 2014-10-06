@@ -11,18 +11,14 @@ import (
 )
 
 var (
-	DefaultPercentiles     = []float64{0.5, 0.75, 0.9, 0.99, 0.999, 0.9999}
-	DefaultPercentileNames = []string{"median", "p75", "p90", "p99", "p999", "p9999"}
+	DefaultPercentiles     = []float64{0.5, 0.75, 0.9, 0.99, 0.999}
+	DefaultPercentileNames = []string{"p50", "p75", "p90", "p99", "p999"}
 )
 
 type Histogram interface {
 	Clear()
 	Update(int64)
-	Count() uint64
-	Sum() int64
-	Min() int64
-	Max() int64
-	Mean() float64
+	Distribution() DistributionValue
 	Percentiles([]float64) []int64
 	String() string
 }
@@ -57,9 +53,10 @@ func (e *HistogramExport) MarshalText() ([]byte, error) {
 
 // Return a JSON encoded version of the Histgram output
 func histogramToJSON(h Histogram, percentiles []float64, percentileNames []string) string {
+	v := h.Distribution()
 	b := &bytes.Buffer{}
-	fmt.Fprintf(b, "{\"count\":%d,\"sum\":%d,\"min\":%d,\"max\":%d,\"mean\":%s",
-		h.Count(), h.Sum(), h.Min(), h.Max(), strconv.FormatFloat(h.Mean(), 'g', -1, 64))
+	fmt.Fprintf(b, "{\"count\":%d,\"sum\":%f,\"min\":%f,\"max\":%f,\"mean\":%s",
+		v.Count, v.Sum, v.Min, v.Max, strconv.FormatFloat(v.Mean(), 'g', -1, 64))
 	perc := h.Percentiles(percentiles)
 	for i, p := range perc {
 		fmt.Fprintf(b, ",\"%s\":%d", percentileNames[i], p)

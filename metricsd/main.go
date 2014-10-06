@@ -225,7 +225,7 @@ func sendMetricsLibrato(met *librato.Client, ts time.Time, counters map[string]i
 		metrics.Counters = append(metrics.Counters, librato.Metric{Name: name, Value: float64(value)})
 	}
 	for name, hist := range histograms {
-		metrics.Gauges = append(metrics.Gauges, librato.Metric{Name: name, Value: hist.Mean()})
+		metrics.Gauges = append(metrics.Gauges, librato.Metric{Name: name, Value: hist.Distribution().Mean()})
 		for i, p := range hist.Percentiles(percentiles) {
 			metrics.Gauges = append(metrics.Gauges,
 				librato.Metric{Name: fmt.Sprintf("%s.%s", name, percentileNames[i]), Value: float64(p)})
@@ -242,7 +242,7 @@ func sendMetricsStatHat(ts time.Time, counters map[string]int64, histograms map[
 		}
 	}
 	for name, hist := range histograms {
-		if err := stathat.PostEZValue(name, *flagStatHatEmail, hist.Mean()); err != nil {
+		if err := stathat.PostEZValue(name, *flagStatHatEmail, hist.Distribution().Mean()); err != nil {
 			return err
 		}
 		for i, p := range hist.Percentiles(percentiles) {

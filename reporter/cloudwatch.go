@@ -16,14 +16,11 @@ import (
 )
 
 type cloudWatchReporter struct {
-	namespace       string
-	percentiles     []float64
-	percentileNames []string
-	counterCache    *counterDeltaCache
-	client          *aws4.Client
-	dimensions      map[string]string
-	endpoint        string
-	authFunc        AWSAuthFunc
+	namespace  string
+	client     *aws4.Client
+	dimensions map[string]string
+	endpoint   string
+	authFunc   AWSAuthFunc
 }
 
 type cloudWatchMetric struct {
@@ -40,24 +37,12 @@ const cloudWatchVersion = "2010-08-01"
 
 type AWSAuthFunc func() (accessKey string, secretKey string, securityToken string)
 
-func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *PeriodicReporter {
-	lr := newCloudWatchReporter(interval, region, authFunc, namespace, dimensions, percentiles, timeout)
+func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, timeout time.Duration) *PeriodicReporter {
+	lr := newCloudWatchReporter(interval, region, authFunc, namespace, dimensions, timeout)
 	return NewPeriodicReporter(registry, interval, true, lr)
 }
 
-func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, percentiles map[string]float64, timeout time.Duration) *cloudWatchReporter {
-	per := metrics.DefaultPercentiles
-	perNames := metrics.DefaultPercentileNames
-
-	if percentiles != nil {
-		per = make([]float64, 0)
-		perNames = make([]string, 0)
-		for name, p := range percentiles {
-			per = append(per, p)
-			perNames = append(perNames, name)
-		}
-	}
-
+func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, timeout time.Duration) *cloudWatchReporter {
 	if timeout == 0 {
 		timeout = time.Second * 15
 	}
@@ -71,13 +56,10 @@ func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAu
 	}
 
 	return &cloudWatchReporter{
-		endpoint:        fmt.Sprintf("https://monitoring.%s.amazonaws.com", region),
-		namespace:       namespace,
-		percentiles:     per,
-		percentileNames: perNames,
-		counterCache:    &counterDeltaCache{},
-		dimensions:      dimensions,
-		authFunc:        authFunc,
+		endpoint:   fmt.Sprintf("https://monitoring.%s.amazonaws.com", region),
+		namespace:  namespace,
+		dimensions: dimensions,
+		authFunc:   authFunc,
 		client: &aws4.Client{
 			Keys:   &aws4.Keys{},
 			Client: awsClient,
@@ -85,50 +67,20 @@ func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAu
 	}
 }
 
-func (r *cloudWatchReporter) Report(registry metrics.Registry) {
+func (r *cloudWatchReporter) Report(snapshot *metrics.RegistrySnapshot) {
 	mets := make(map[string]cloudWatchMetric)
-	registry.Do(func(name string, metric interface{}) error {
-		name = strings.Replace(name, "/", ".", -1)
-		switch m := metric.(type) {
-		case metrics.CounterValue:
-			mets[name] = cloudWatchMetric{value: r.counterCache.delta(name, uint64(m))}
-		case metrics.GaugeValue:
-			mets[name] = cloudWatchMetric{value: int64(m)}
-		case metrics.IntegerGauge:
-			mets[name] = cloudWatchMetric{value: int64(m.Value())}
-		case metrics.Counter:
-			mets[name] = cloudWatchMetric{value: r.counterCache.delta(name, m.Count())}
-		case *metrics.EWMA:
-			mets[name] = cloudWatchMetric{value: m.Rate()}
-		case *metrics.EWMAGauge:
-			mets[name] = cloudWatchMetric{value: m.Mean()}
-		case *metrics.Meter:
-			mets[name+".1m"] = cloudWatchMetric{value: m.OneMinuteRate()}
-			mets[name+".5m"] = cloudWatchMetric{value: m.FiveMinuteRate()}
-			mets[name+".15m"] = cloudWatchMetric{value: m.FifteenMinuteRate()}
-		case metrics.Histogram:
-			count := m.Count()
-			if count > 0 {
-				deltaCount := r.counterCache.delta(name+".count", count)
-				if deltaCount > 0 {
-					deltaSum := r.counterCache.delta(name+".sum", uint64(m.Sum()))
-					w := cloudWatchMetric{}
-					w.stats.max = float64(deltaSum) / float64(deltaCount)
-					w.stats.min = float64(deltaSum) / float64(deltaCount)
-					w.stats.sum = float64(deltaSum)
-					w.stats.sampleCount = deltaCount
-					mets[name] = w
-				}
-				percentiles := m.Percentiles(r.percentiles)
-				for i, perc := range percentiles {
-					mets[name+"."+r.percentileNames[i]] = cloudWatchMetric{value: perc}
-				}
-			}
-		default:
-			log.Printf("metrics/reporter/cloudwatch: unrecognized metric type for %s: %T %+v", name, m, m)
-		}
-		return nil
-	})
+
+	for _, v := range snapshot.Values {
+		mets[strings.Replace(v.Name, "/", ".", -1)] = cloudWatchMetric{value: v.Value}
+	}
+	for _, v := range snapshot.Distributions {
+		m := cloudWatchMetric{}
+		m.stats.min = v.Value.Min
+		m.stats.max = v.Value.Max
+		m.stats.sum = v.Value.Sum
+		m.stats.sampleCount = v.Value.Count
+		mets[strings.Replace(v.Name, "/", ".", -1)] = m
+	}
 
 	if len(mets) > 0 {
 		// TODO: max POST size to CloudWatch is 40KB. Break up larger payloads over multiple requests.

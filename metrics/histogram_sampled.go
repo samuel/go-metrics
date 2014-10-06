@@ -76,43 +76,18 @@ func (h *sampledHistogram) Update(value int64) {
 	h.lock.Unlock()
 }
 
-func (h *sampledHistogram) Count() uint64 {
+func (h *sampledHistogram) Distribution() DistributionValue {
 	h.lock.RLock()
-	defer h.lock.RUnlock()
-	return h.count
-}
-
-func (h *sampledHistogram) Sum() int64 {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-	return h.sum
-}
-
-func (h *sampledHistogram) Min() int64 {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-	if h.count == 0 {
-		return 0
+	v := DistributionValue{
+		Count: h.count,
+		Sum:   float64(h.sum),
 	}
-	return h.min
-}
-
-func (h *sampledHistogram) Max() int64 {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
-	if h.count == 0 {
-		return 0
-	}
-	return h.max
-}
-
-func (h *sampledHistogram) Mean() float64 {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
 	if h.count > 0 {
-		return float64(h.sum) / float64(h.count)
+		v.Min = float64(h.min)
+		v.Max = float64(h.max)
 	}
-	return 0
+	h.lock.RUnlock()
+	return v
 }
 
 func (h *sampledHistogram) Percentiles(percentiles []float64) []int64 {

@@ -29,7 +29,7 @@ type mpHistogram struct {
 	buffer     [][]int64
 	bufferPool [2][]int64
 	indices    []int
-	count      int64
+	count      uint64
 	sum        int64
 	min        int64
 	max        int64
@@ -100,44 +100,23 @@ func (mp *mpHistogram) Clear() {
 	mp.mutex.Unlock()
 }
 
-func (mp *mpHistogram) Count() uint64 {
+func (mp *mpHistogram) Distribution() DistributionValue {
 	mp.mutex.RLock()
-	count := uint64(mp.count)
+	v := DistributionValue{
+		Count: mp.count,
+		Sum:   float64(mp.sum),
+	}
+	if mp.count > 0 {
+		v.Min = float64(mp.min)
+		v.Max = float64(mp.max)
+	}
 	mp.mutex.RUnlock()
-	return count
-}
-
-func (mp *mpHistogram) Mean() float64 {
-	mp.mutex.RLock()
-	mean := float64(mp.sum) / float64(mp.count)
-	mp.mutex.RUnlock()
-	return mean
-}
-
-func (mp *mpHistogram) Sum() int64 {
-	mp.mutex.RLock()
-	sum := mp.sum
-	mp.mutex.RUnlock()
-	return sum
-}
-
-func (mp *mpHistogram) Min() int64 {
-	mp.mutex.RLock()
-	min := mp.min
-	mp.mutex.RUnlock()
-	return min
-}
-
-func (mp *mpHistogram) Max() int64 {
-	mp.mutex.RLock()
-	max := mp.max
-	mp.mutex.RUnlock()
-	return max
+	return v
 }
 
 func (mp *mpHistogram) Percentiles(qs []float64) []int64 {
-	mp.mutex.Lock()
-	defer mp.mutex.Unlock()
+	mp.mutex.RLock()
+	defer mp.mutex.RUnlock()
 
 	output := make([]int64, len(qs))
 	if mp.count == 0 {
@@ -338,7 +317,7 @@ func (mp *mpHistogram) isBufferEmpty(level int) bool {
 	if level == mp.currentTop {
 		return false // root buffer (is present) is always full
 	}
-	return (mp.count/int64(mp.bufferSize*mp.weight(level)))&1 == 1
+	return (mp.count/uint64(mp.bufferSize*mp.weight(level)))&1 == 1
 }
 
 // return the weight of the level ie. 2^(i-1) except for the two tree

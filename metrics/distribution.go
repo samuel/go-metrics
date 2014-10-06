@@ -11,17 +11,28 @@ import (
 	"sync"
 )
 
-type variance struct {
-	m float64
-	s float64
-}
-
 type DistributionValue struct {
 	Count    uint64
 	Sum      float64
 	Min      float64
 	Max      float64
 	Variance float64
+}
+
+func (v DistributionValue) Mean() float64 {
+	if v.Count > 0 {
+		return v.Sum / float64(v.Count)
+	}
+	return 0.0
+}
+
+type DistributionMetric interface {
+	Value() DistributionValue
+}
+
+type variance struct {
+	m float64
+	s float64
 }
 
 // Distribution tracks the min, max, sum, count, and variance/stddev of a set of values.
@@ -34,7 +45,7 @@ type Distribution struct {
 	mu       sync.Mutex
 }
 
-// NewDistribution returns a new instance of a Distribution
+// NewDistribution returns a new instance of an Distribution
 func NewDistribution() *Distribution {
 	d := &Distribution{}
 	d.Reset()

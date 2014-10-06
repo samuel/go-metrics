@@ -14,94 +14,29 @@ import (
 )
 
 type statHatReporter struct {
-	source          string
-	email           string
-	percentiles     []float64
-	percentileNames []string
-	counterCache    *counterDeltaCache
+	source string
+	email  string
 }
 
-func NewStatHatReporter(registry metrics.Registry, interval time.Duration, email, source string, percentiles map[string]float64) *PeriodicReporter {
-	per := metrics.DefaultPercentiles
-	perNames := metrics.DefaultPercentileNames
-
-	if percentiles != nil {
-		per = make([]float64, 0)
-		perNames = make([]string, 0)
-		for name, p := range percentiles {
-			per = append(per, p)
-			perNames = append(perNames, name)
-		}
-	}
-
+func NewStatHatReporter(registry metrics.Registry, interval time.Duration, email, source string) *PeriodicReporter {
 	sr := &statHatReporter{
-		source:          source,
-		email:           email,
-		percentiles:     per,
-		percentileNames: perNames,
-		counterCache:    &counterDeltaCache{},
+		source: source,
+		email:  email,
 	}
 	return NewPeriodicReporter(registry, interval, false, sr)
 }
 
-func (r *statHatReporter) Report(registry metrics.Registry) {
-	registry.Do(func(name string, metric interface{}) error {
-		name = strings.Replace(name, "/", ".", -1)
-		switch m := metric.(type) {
-		case metrics.CounterValue:
-			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, uint64(m)))); err != nil {
-				log.Printf("ERR stathat.PostEZCount: %+v", err)
-			}
-		case metrics.GaugeValue:
-			if err := stathat.PostEZValue(name, r.email, float64(m)); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-		case metrics.IntegerGauge:
-			if err := stathat.PostEZValue(name, r.email, float64(m.Value())); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-		case metrics.Counter:
-			if err := stathat.PostEZCount(name, r.email, int(r.counterCache.delta(name, m.Count()))); err != nil {
-				log.Printf("ERR stathat.PostEZCount: %+v", err)
-			}
-		case *metrics.EWMA:
-			if err := stathat.PostEZValue(name, r.email, m.Rate()); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-		case *metrics.EWMAGauge:
-			if err := stathat.PostEZValue(name, r.email, m.Mean()); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-		case *metrics.Meter:
-			if err := stathat.PostEZValue(name+".1m", r.email, m.OneMinuteRate()); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-			if err := stathat.PostEZValue(name+".5m", r.email, m.FiveMinuteRate()); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-			if err := stathat.PostEZValue(name+".15m", r.email, m.FifteenMinuteRate()); err != nil {
-				log.Printf("ERR stathat.PostEZValue: %+v", err)
-			}
-		case metrics.Histogram:
-			count := m.Count()
-			if count > 0 {
-				deltaCount := r.counterCache.delta(name+".count", count)
-				if deltaCount > 0 {
-					deltaSum := r.counterCache.delta(name+".sum", uint64(m.Sum()))
-					if err := stathat.PostEZValue(name+".mean", r.email, float64(deltaSum)/float64(deltaCount)); err != nil {
-						log.Printf("ERR stathat.PostEZValue: %+v", err)
-					}
-				}
-				percentiles := m.Percentiles(r.percentiles)
-				for i, perc := range percentiles {
-					if err := stathat.PostEZValue(name+"."+r.percentileNames[i], r.email, float64(perc)); err != nil {
-						log.Printf("ERR stathat.PostEZValue: %+v", err)
-					}
-				}
-			}
-		default:
-			log.Printf("Unrecognized metric type for %s: %+v", name, m)
+func (r *statHatReporter) Report(snapshot *metrics.RegistrySnapshot) {
+	for _, v := range snapshot.Values {
+		name := strings.Replace(v.Name, "/", ".", -1)
+		if err := stathat.PostEZValue(name, r.email, v.Value); err != nil {
+			log.Printf("stathat: failed to post metric %s: %s", name, err.Error())
 		}
-		return nil
-	})
+	}
+	for _, v := range snapshot.Distributions {
+		name := strings.Replace(v.Name, "/", ".", -1)
+		if err := stathat.PostEZValue(name, r.email, v.Value.Mean()); err != nil {
+			log.Printf("stathat: failed to post metric %s: %s", name, err.Error())
+		}
+	}
 }

@@ -9,51 +9,62 @@ import (
 	"sync/atomic"
 )
 
+type GaugeMetric interface {
+	Value() float64
+}
+
 type GaugeValue float64
 
-type atomicInt64Gauge int64
-
-type IntegerGauge interface {
-	Inc(delta int64)
-	Dec(delta int64)
-	Set(delta int64)
-	Value() int64
-	String() string
+func (v GaugeValue) Value() float64 {
+	return float64(v)
 }
 
-func NewIntegerGauge() IntegerGauge {
-	c := atomicInt64Gauge(int64(0))
-	return &c
+type GaugeFunc func() float64
+
+func (f GaugeFunc) Value() float64 {
+	return f()
 }
 
-func (c *atomicInt64Gauge) Inc(delta int64) {
-	atomic.AddInt64((*int64)(c), delta)
+type IntegerGauge struct {
+	value int64
 }
 
-func (c *atomicInt64Gauge) Dec(delta int64) {
-	atomic.AddInt64((*int64)(c), -delta)
+func NewIntegerGauge() *IntegerGauge {
+	return &IntegerGauge{}
 }
 
-func (c *atomicInt64Gauge) Set(value int64) {
-	atomic.StoreInt64((*int64)(c), value)
+func (c *IntegerGauge) Inc(delta int64) {
+	atomic.AddInt64(&c.value, delta)
 }
 
-func (c *atomicInt64Gauge) Reset() int64 {
-	return atomic.SwapInt64((*int64)(c), 0)
+func (c *IntegerGauge) Dec(delta int64) {
+	atomic.AddInt64(&c.value, -delta)
 }
 
-func (c *atomicInt64Gauge) Value() int64 {
-	return atomic.LoadInt64((*int64)(c))
+func (c *IntegerGauge) Set(value int64) {
+	atomic.StoreInt64(&c.value, value)
 }
 
-func (c *atomicInt64Gauge) String() string {
-	return strconv.FormatInt(c.Value(), 10)
+func (c *IntegerGauge) Reset() int64 {
+	return atomic.SwapInt64(&c.value, 0)
 }
 
-func (c *atomicInt64Gauge) MarshalJSON() ([]byte, error) {
+func (c *IntegerGauge) IntegerValue() int64 {
+	return atomic.LoadInt64(&c.value)
+}
+
+func (c *IntegerGauge) Value() float64 {
+	return float64(c.IntegerValue())
+}
+
+func (c *IntegerGauge) String() string {
+	return strconv.FormatInt(c.IntegerValue(), 10)
+}
+
+func (c *IntegerGauge) MarshalJSON() ([]byte, error) {
 	return []byte(c.String()), nil
 }
 
-func (c *atomicInt64Gauge) MarshalText() ([]byte, error) {
+func (c *IntegerGauge) MarshalText() ([]byte, error) {
 	return c.MarshalJSON()
 }

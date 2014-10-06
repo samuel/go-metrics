@@ -9,44 +9,52 @@ import (
 	"sync/atomic"
 )
 
-// CounterValue is used for stats reporting to identify the value as a counter rather than a gauge.
+// Counter is the interface for a counter metric.
+type CounterMetric interface {
+	Count() uint64
+}
+
 type CounterValue uint64
 
-// Counter is the interface for a counter metric.
-type Counter interface {
-	Inc(delta uint64)
-	Count() uint64
-	String() string
+func (v CounterValue) Count() uint64 {
+	return uint64(v)
 }
 
-type atomicCounter uint64
+type CounterFunc func() uint64
 
-// NewCounter returns a counter implemented as an atomic int64.
-func NewCounter() Counter {
-	c := atomicCounter(uint64(0))
-	return &c
+func (f CounterFunc) Count() uint64 {
+	return f()
 }
 
-func (c *atomicCounter) Inc(delta uint64) {
-	atomic.AddUint64((*uint64)(c), delta)
+type Counter struct {
+	value uint64
 }
 
-func (c *atomicCounter) Count() uint64 {
-	return atomic.LoadUint64((*uint64)(c))
+// NewCounter returns a counter implemented as an atomic uint64.
+func NewCounter() *Counter {
+	return &Counter{}
 }
 
-func (c *atomicCounter) Reset() uint64 {
-	return atomic.SwapUint64((*uint64)(c), 0)
+func (c *Counter) Inc(delta uint64) {
+	atomic.AddUint64(&c.value, delta)
 }
 
-func (c *atomicCounter) String() string {
+func (c *Counter) Count() uint64 {
+	return atomic.LoadUint64(&c.value)
+}
+
+func (c *Counter) Reset() uint64 {
+	return atomic.SwapUint64(&c.value, 0)
+}
+
+func (c *Counter) String() string {
 	return strconv.FormatUint(c.Count(), 10)
 }
 
-func (c *atomicCounter) MarshalJSON() ([]byte, error) {
+func (c *Counter) MarshalJSON() ([]byte, error) {
 	return []byte(c.String()), nil
 }
 
-func (c *atomicCounter) MarshaText() ([]byte, error) {
+func (c *Counter) MarshaText() ([]byte, error) {
 	return c.MarshalJSON()
 }
