@@ -10,14 +10,12 @@ import (
 
 func TestSampledHistogramEmpty(t *testing.T) {
 	histogram := NewSampledHistogram(NewUniformSample(100))
-	if histogram.Count() != 0 {
-		t.Errorf("Count for empty histogram should be 0 not %d", histogram.Count())
+	v := histogram.Distribution()
+	if v.Count != 0 {
+		t.Errorf("Count for empty histogram should be 0 not %d", v.Count)
 	}
-	if histogram.Sum() != 0 {
-		t.Errorf("Sum for empty histogram should be 0 not %d", histogram.Sum())
-	}
-	if histogram.Mean() != 0 {
-		t.Errorf("Mean for empty histogram should be 0 not %.2f", histogram.Mean())
+	if v.Sum != 0 {
+		t.Errorf("Sum for empty histogram should be 0 not %f", v.Sum)
 	}
 	perc := histogram.Percentiles([]float64{0.5, 0.75, 0.99})
 	if len(perc) != 3 {
@@ -33,20 +31,18 @@ func TestSampledHistogram1to10000(t *testing.T) {
 	for i := int64(1); i <= 10000; i++ {
 		histogram.Update(i)
 	}
-	if histogram.Count() != 10000 {
-		t.Errorf("Count for histogram should be 10000 not %d", histogram.Count())
+	v := histogram.Distribution()
+	if v.Count != 10000 {
+		t.Errorf("Count for histogram should be 10000 not %d", v.Count)
 	}
-	if histogram.Sum() != 50005000 {
-		t.Errorf("Sum for histogram should be 50005000 not %df", histogram.Sum())
+	if v.Sum != 50005000 {
+		t.Errorf("Sum for histogram should be 50005000 not %f", v.Sum)
 	}
-	if histogram.Min() != 1 {
-		t.Errorf("Min for histogram should be 1 not %d", histogram.Sum())
+	if v.Min != 1 {
+		t.Errorf("Min for histogram should be 1 not %f", v.Min)
 	}
-	if histogram.Max() != 10000 {
-		t.Errorf("Max for histogram should be 10000 not %d", histogram.Sum())
-	}
-	if histogram.Mean() != 5000.5 {
-		t.Errorf("Mean for histogram should be 5000.5 not %.2f", histogram.Mean())
+	if v.Max != 10000 {
+		t.Errorf("Max for histogram should be 10000 not %f", v.Max)
 	}
 	perc := histogram.Percentiles([]float64{0.5, 0.75, 0.99})
 	if len(perc) != 3 {

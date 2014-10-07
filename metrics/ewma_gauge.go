@@ -84,7 +84,7 @@ func (e *EWMAGauge) tickWatcher() {
 	}
 }
 
-// Tick the moving average - NOT thread safe
+// Tick the moving average
 func (e *EWMAGauge) Tick() {
 	value := e.fun()
 	mean := e.Mean()
