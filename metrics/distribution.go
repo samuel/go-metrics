@@ -45,7 +45,7 @@ type Distribution struct {
 	mu       sync.Mutex
 }
 
-// NewDistribution returns a new instance of an Distribution
+// NewDistribution returns a new instance of a Distribution
 func NewDistribution() *Distribution {
 	d := &Distribution{}
 	d.Reset()
