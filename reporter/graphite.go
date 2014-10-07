@@ -19,12 +19,12 @@ type graphiteReporter struct {
 	source string
 }
 
-func NewGraphiteReporter(registry metrics.Registry, interval time.Duration, addr, source string) *PeriodicReporter {
+func NewGraphiteReporter(registry metrics.Registry, interval time.Duration, latched bool, addr, source string) *PeriodicReporter {
 	gr := &graphiteReporter{
 		addr:   addr,
 		source: source,
 	}
-	return NewPeriodicReporter(registry, interval, false, gr)
+	return NewPeriodicReporter(registry, interval, false, latched, gr)
 }
 
 func (r *graphiteReporter) sourcedName(name string) string {

@@ -24,13 +24,13 @@ type Reporter interface {
 	Report(snapshot *metrics.RegistrySnapshot)
 }
 
-func NewPeriodicReporter(registry metrics.Registry, interval time.Duration, alignInterval bool, reporter Reporter) *PeriodicReporter {
+func NewPeriodicReporter(registry metrics.Registry, interval time.Duration, alignInterval, latched bool, reporter Reporter) *PeriodicReporter {
 	return &PeriodicReporter{
 		registry:      registry,
 		interval:      interval,
 		alignInterval: alignInterval,
 		reporter:      reporter,
-		snapshot:      metrics.NewRegistrySnapshot(),
+		snapshot:      metrics.NewRegistrySnapshot(latched),
 	}
 }
 

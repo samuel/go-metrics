@@ -18,12 +18,12 @@ type libratoReporter struct {
 	client *librato.Client
 }
 
-func NewLibratoReporter(registry metrics.Registry, interval time.Duration, username, token, source string) *PeriodicReporter {
+func NewLibratoReporter(registry metrics.Registry, interval time.Duration, latched bool, username, token, source string) *PeriodicReporter {
 	lr := &libratoReporter{
 		source: source,
 		client: &librato.Client{Username: username, Token: token},
 	}
-	return NewPeriodicReporter(registry, interval, true, lr)
+	return NewPeriodicReporter(registry, interval, true, latched, lr)
 }
 
 func (r *libratoReporter) Report(snapshot *metrics.RegistrySnapshot) {

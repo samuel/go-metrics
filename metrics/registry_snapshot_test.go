@@ -21,7 +21,7 @@ func (s namedValueSlice) Swap(a, b int) {
 
 func TestRegistrySnapshot(t *testing.T) {
 	reg := NewRegistry()
-	snap := NewRegistrySnapshot()
+	snap := NewRegistrySnapshot(true)
 
 	snap.Snapshot(reg)
 
@@ -31,6 +31,8 @@ func TestRegistrySnapshot(t *testing.T) {
 	gauge := NewIntegerGauge()
 	gauge.Inc(3)
 	reg.Add("gauge", gauge)
+	gaugeVal := 1.0
+	reg.Add("gaugefunc", GaugeFunc(func() float64 { return gaugeVal }))
 	hist := NewUnbiasedHistogram()
 	hist.Update(2.0)
 	reg.Add("hist", hist)
@@ -39,8 +41,8 @@ func TestRegistrySnapshot(t *testing.T) {
 	sort.Sort(namedValueSlice(snap.Values))
 	t.Logf("%+v", snap)
 
-	if len(snap.Values) != 7 {
-		t.Fatalf("Expected 7 values. Got %d", len(snap.Values))
+	if len(snap.Values) != 8 {
+		t.Fatalf("Expected 8 values. Got %d", len(snap.Values))
 	}
 	if e := (NamedValue{Name: "counter", Value: 2}); snap.Values[0] != e {
 		t.Errorf("Expected %+v. Got %+v", e, snap.Values[0])
@@ -51,6 +53,7 @@ func TestRegistrySnapshot(t *testing.T) {
 
 	counter.Inc(1)
 	gauge.Set(4)
+	gaugeVal = 9.0
 
 	snap.Snapshot(reg)
 	sort.Sort(namedValueSlice(snap.Values))

@@ -16,12 +16,14 @@ type RegistrySnapshot struct {
 	Values        []NamedValue
 	Distributions []NamedDistribution
 
-	counterValues map[string]uint64
+	resetOnSnapshot bool
+	counterValues   map[string]uint64
 }
 
-func NewRegistrySnapshot() *RegistrySnapshot {
+func NewRegistrySnapshot(resetOnSnapshot bool) *RegistrySnapshot {
 	return &RegistrySnapshot{
-		counterValues: make(map[string]uint64),
+		resetOnSnapshot: resetOnSnapshot,
+		counterValues:   make(map[string]uint64),
 	}
 }
 
@@ -54,7 +56,16 @@ func (rs *RegistrySnapshot) Snapshot(registry Registry) {
 				}
 			}
 		case *Counter:
-			rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(m.Reset())})
+			if rs.resetOnSnapshot {
+				rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(m.Reset())})
+			} else {
+				oldValue := rs.counterValues[name]
+				newValue := m.Count()
+				if newValue > oldValue {
+					rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(newValue - oldValue)})
+				}
+				rs.counterValues[name] = newValue
+			}
 		case CounterMetric:
 			oldValue := rs.counterValues[name]
 			newValue := m.Count()

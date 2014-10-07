@@ -18,12 +18,12 @@ type statHatReporter struct {
 	email  string
 }
 
-func NewStatHatReporter(registry metrics.Registry, interval time.Duration, email, source string) *PeriodicReporter {
+func NewStatHatReporter(registry metrics.Registry, interval time.Duration, latched bool, email, source string) *PeriodicReporter {
 	sr := &statHatReporter{
 		source: source,
 		email:  email,
 	}
-	return NewPeriodicReporter(registry, interval, false, sr)
+	return NewPeriodicReporter(registry, interval, false, latched, sr)
 }
 
 func (r *statHatReporter) Report(snapshot *metrics.RegistrySnapshot) {

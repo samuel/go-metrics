@@ -17,8 +17,8 @@ type writerReporter struct {
 	w io.Writer
 }
 
-func NewWriterReporter(registry metrics.Registry, interval time.Duration, w io.Writer) *PeriodicReporter {
-	return NewPeriodicReporter(registry, interval, false, &writerReporter{w})
+func NewWriterReporter(registry metrics.Registry, interval time.Duration, latched bool, w io.Writer) *PeriodicReporter {
+	return NewPeriodicReporter(registry, interval, false, latched, &writerReporter{w})
 }
 
 func (r *writerReporter) Report(snapshot *metrics.RegistrySnapshot) {

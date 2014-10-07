@@ -25,7 +25,7 @@ func TestCloudWatch(t *testing.T) {
 	auth := func() (string, string, string) {
 		return accessKey, secretKey, ""
 	}
-	snapshot := metrics.NewRegistrySnapshot()
+	snapshot := metrics.NewRegistrySnapshot(true)
 	snapshot.Snapshot(registry)
 	reporter := newCloudWatchReporter(time.Minute, "us-east-1", auth, "Test", map[string]string{"Test": "go-metrics"}, time.Second*10)
 	reporter.Report(snapshot)

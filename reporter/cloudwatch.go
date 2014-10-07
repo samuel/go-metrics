@@ -37,9 +37,9 @@ const cloudWatchVersion = "2010-08-01"
 
 type AWSAuthFunc func() (accessKey string, secretKey string, securityToken string)
 
-func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, timeout time.Duration) *PeriodicReporter {
+func NewCloudWatchReporter(registry metrics.Registry, interval time.Duration, latched bool, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, timeout time.Duration) *PeriodicReporter {
 	lr := newCloudWatchReporter(interval, region, authFunc, namespace, dimensions, timeout)
-	return NewPeriodicReporter(registry, interval, true, lr)
+	return NewPeriodicReporter(registry, interval, true, latched, lr)
 }
 
 func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAuthFunc, namespace string, dimensions map[string]string, timeout time.Duration) *cloudWatchReporter {
