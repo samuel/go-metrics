@@ -61,18 +61,22 @@ func (rs *RegistrySnapshot) Snapshot(registry Registry) {
 			} else {
 				oldValue := rs.counterValues[name]
 				newValue := m.Count()
-				if newValue > oldValue {
-					rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(newValue - oldValue)})
-				}
 				rs.counterValues[name] = newValue
+				delta := newValue
+				if newValue > oldValue {
+					delta = newValue - oldValue
+				}
+				rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(delta)})
 			}
 		case CounterMetric:
 			oldValue := rs.counterValues[name]
 			newValue := m.Count()
-			if newValue > oldValue {
-				rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(newValue - oldValue)})
-			}
 			rs.counterValues[name] = newValue
+			delta := newValue
+			if newValue > oldValue {
+				delta = newValue - oldValue
+			}
+			rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(delta)})
 		case GaugeMetric:
 			rs.Values = append(rs.Values, NamedValue{Name: name, Value: m.Value()})
 		case DistributionMetric:
