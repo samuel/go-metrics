@@ -50,7 +50,7 @@ func (rs *RegistrySnapshot) Snapshot(registry Registry) {
 				rs.Distributions = append(rs.Distributions, NamedDistribution{Name: name, Value: v})
 				for i, p := range perc {
 					rs.Values = append(rs.Values, NamedValue{
-						Name:  name + "." + DefaultPercentileNames[i],
+						Name:  name + "/" + DefaultPercentileNames[i],
 						Value: float64(p),
 					})
 				}
