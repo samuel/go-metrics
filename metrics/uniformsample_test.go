@@ -42,6 +42,7 @@ func TestUSampleSizes(t *testing.T) {
 }
 
 func BenchmarkUniformSampleUpdate(b *testing.B) {
+	b.ReportAllocs()
 	sample := NewUniformSample(1000)
 	for i := 0; i < b.N; i++ {
 		sample.Update(int64(i))

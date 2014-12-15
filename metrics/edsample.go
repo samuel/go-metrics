@@ -44,7 +44,7 @@ func (r *reservoir) Values() (values []int64) {
 
 func (r *reservoir) ScalePriority(scale float64) {
 	for i, sample := range r.samples {
-		r.samples[i] = priorityValue{sample.priority * scale, sample.value}
+		r.samples[i] = priorityValue{priority: sample.priority * scale, value: sample.value}
 	}
 }
 
@@ -77,7 +77,6 @@ type exponentiallyDecayingSample struct {
 	// biased the sample will be towards newer values
 	alpha         float64
 	values        *reservoir
-	count         int
 	startTime     time.Time
 	nextScaleTime time.Time
 	now           func() time.Time
@@ -102,57 +101,50 @@ func NewExponentiallyDecayingSampleWithCustomTime(reservoirSize int, alpha float
 	eds := exponentiallyDecayingSample{
 		reservoirSize: reservoirSize,
 		alpha:         alpha,
-		values:        &reservoir{},
-		now:           now,
+		values: &reservoir{
+			samples: make([]priorityValue, 0, reservoirSize),
+		},
+		now: now,
 	}
 	eds.Clear()
 	return &eds
 }
 
-func (sample *exponentiallyDecayingSample) Clear() {
-	sample.values.Clear()
-	heap.Init(sample.values)
-	sample.count = 0
-	sample.startTime = sample.now()
-	sample.nextScaleTime = sample.startTime.Add(edRescaleThreshold)
+func (s *exponentiallyDecayingSample) Clear() {
+	s.values.Clear()
+	heap.Init(s.values)
+	s.startTime = s.now()
+	s.nextScaleTime = s.startTime.Add(edRescaleThreshold)
 }
 
-func (sample *exponentiallyDecayingSample) Len() int {
-	if sample.count < sample.reservoirSize {
-		return sample.count
-	}
-	return sample.reservoirSize
+func (s *exponentiallyDecayingSample) Len() int {
+	return s.values.Len()
 }
 
-func (sample *exponentiallyDecayingSample) Values() []int64 {
-	return sample.values.Values()
+func (s *exponentiallyDecayingSample) Values() []int64 {
+	return s.values.Values()
 }
 
-func (sample *exponentiallyDecayingSample) Update(value int64) {
-	timestamp := sample.now()
-	if timestamp.After(sample.nextScaleTime) {
-		sample.rescale(timestamp)
+func (s *exponentiallyDecayingSample) Update(value int64) {
+	timestamp := s.now()
+	if timestamp.After(s.nextScaleTime) {
+		s.rescale(timestamp)
+		timestamp = s.now()
 	}
 
-	timestamp = sample.now()
-	priority := sample.weight(timestamp.Sub(sample.startTime)) / rand.Float64()
-	sample.count++
-	if sample.count <= sample.reservoirSize {
-		heap.Push(sample.values, priorityValue{priority, value})
+	priority := s.weight(timestamp.Sub(s.startTime)) / rand.Float64()
+	if s.values.Len() < s.reservoirSize {
+		heap.Push(s.values, priorityValue{priority: priority, value: value})
 	} else {
-		if first := sample.values.Get(0); first.priority < priority {
-			// Once Go 1.2 is release
-			// sample.values.samples[0] = priorityValue{priority, value}
-			// heap.Fix(sample.values, 0)
-
-			heap.Pop(sample.values)
-			heap.Push(sample.values, priorityValue{priority, value})
+		if first := s.values.Get(0); first.priority < priority {
+			heap.Pop(s.values)
+			heap.Push(s.values, priorityValue{priority: priority, value: value})
 		}
 	}
 }
 
-func (sample *exponentiallyDecayingSample) weight(delta time.Duration) float64 {
-	return math.Exp(sample.alpha * delta.Seconds())
+func (s *exponentiallyDecayingSample) weight(delta time.Duration) float64 {
+	return math.Exp(s.alpha * delta.Seconds())
 }
 
 /*
@@ -174,11 +166,10 @@ and obtain the correct value as if we had instead computed relative to a new
 landmark L′ (and then use this new L′ at query time). This can be done with
 a linear pass over whatever data structure is being used.
 */
-func (sample *exponentiallyDecayingSample) rescale(now time.Time) {
-	sample.nextScaleTime = now.Add(edRescaleThreshold)
-	oldStartTime := sample.startTime
-	sample.startTime = now
-	scale := math.Exp(-sample.alpha * sample.startTime.Sub(oldStartTime).Seconds())
-	sample.values.ScalePriority(scale)
-	sample.count = sample.values.Len()
+func (s *exponentiallyDecayingSample) rescale(now time.Time) {
+	s.nextScaleTime = now.Add(edRescaleThreshold)
+	oldStartTime := s.startTime
+	s.startTime = now
+	scale := math.Exp(-s.alpha * s.startTime.Sub(oldStartTime).Seconds())
+	s.values.ScalePriority(scale)
 }

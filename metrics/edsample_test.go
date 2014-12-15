@@ -99,6 +99,7 @@ func TestEDSampleInactivity(t *testing.T) {
 }
 
 func BenchmarkEDSampleUpdate(b *testing.B) {
+	b.ReportAllocs()
 	sample := NewExponentiallyDecayingSample(1000, 0.99)
 	for i := 0; i < b.N; i++ {
 		sample.Update(int64(i))

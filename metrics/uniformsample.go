@@ -11,7 +11,6 @@ import (
 type uniformSample struct {
 	reservoirSize int
 	values        []int64
-	count         int
 }
 
 // NewUniformSample returns a sample randomly selects from a stream. Uses Vitter's
@@ -19,32 +18,31 @@ type uniformSample struct {
 //
 // http://www.cs.umd.edu/~samir/498/vitter.pdf - Random Sampling with a Reservoir
 func NewUniformSample(reservoirSize int) Sample {
-	return &uniformSample{reservoirSize, make([]int64, reservoirSize), 0}
-}
-
-func (sample *uniformSample) Clear() {
-	sample.count = 0
-}
-
-func (sample *uniformSample) Len() int {
-	if sample.count < sample.reservoirSize {
-		return sample.count
+	return &uniformSample{
+		reservoirSize: reservoirSize,
+		values:        make([]int64, 0, reservoirSize),
 	}
-	return sample.reservoirSize
 }
 
-func (sample *uniformSample) Update(value int64) {
-	sample.count++
-	if sample.count <= sample.reservoirSize {
-		sample.values[sample.count-1] = value
+func (s *uniformSample) Clear() {
+	s.values = s.values[:0]
+}
+
+func (s *uniformSample) Len() int {
+	return len(s.values)
+}
+
+func (s *uniformSample) Update(value int64) {
+	if len(s.values) < s.reservoirSize {
+		s.values = append(s.values, value)
 	} else {
-		r := int(rand.Float64() * float64(sample.count))
-		if r < sample.reservoirSize {
-			sample.values[r] = value
+		r := int(rand.Float64() * float64(len(s.values)))
+		if r < s.reservoirSize {
+			s.values[r] = value
 		}
 	}
 }
 
-func (sample *uniformSample) Values() []int64 {
-	return sample.values[:minInt(sample.count, sample.reservoirSize)]
+func (s *uniformSample) Values() []int64 {
+	return s.values
 }
