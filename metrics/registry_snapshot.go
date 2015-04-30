@@ -63,7 +63,7 @@ func (rs *RegistrySnapshot) Snapshot(registry Registry) {
 				newValue := m.Count()
 				rs.counterValues[name] = newValue
 				delta := newValue
-				if newValue > oldValue {
+				if newValue >= oldValue {
 					delta = newValue - oldValue
 				}
 				rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(delta)})
@@ -73,7 +73,7 @@ func (rs *RegistrySnapshot) Snapshot(registry Registry) {
 			newValue := m.Count()
 			rs.counterValues[name] = newValue
 			delta := newValue
-			if newValue > oldValue {
+			if newValue >= oldValue {
 				delta = newValue - oldValue
 			}
 			rs.Values = append(rs.Values, NamedValue{Name: name, Value: float64(delta)})
