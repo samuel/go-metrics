@@ -21,5 +21,7 @@ func (s *runtimeMetrics) Metrics() map[string]interface{} {
 		"heap/HeapObjects": GaugeValue(s.memStats.HeapObjects),
 		"gc/NumGC":         CounterValue(s.memStats.NumGC),
 		"gc/PauseTotalNs":  CounterValue(s.memStats.PauseTotalNs),
+		"Goroutines":       GaugeValue(runtime.NumGoroutine()),
+		"CgoCalls":         CounterValue(runtime.NumCgoCall()),
 	}
 }
