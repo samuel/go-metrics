@@ -33,7 +33,7 @@ func TestUSampleSizes(t *testing.T) {
 		}
 		// Should only have elements from the population
 		values := sample.Values()
-		for i := 0; i < len(values); i++ {
+		for i := range values {
 			if values[i] < 0 || values[i] >= int64(data.populationSize) {
 				t.Errorf("Sample found that's not from population: %d", values[i])
 			}
@@ -44,7 +44,7 @@ func TestUSampleSizes(t *testing.T) {
 func BenchmarkUniformSampleUpdate(b *testing.B) {
 	b.ReportAllocs()
 	sample := NewUniformSample(1000)
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		sample.Update(int64(i))
 	}
 }

@@ -48,10 +48,12 @@ func (e *EWMA) String() string {
 	return strconv.FormatFloat(rate, 'g', -1, 64)
 }
 
+// MarshalJSON implements json.Marshaler
 func (e *EWMA) MarshalJSON() ([]byte, error) {
 	return []byte(e.String()), nil
 }
 
+// MarshalText implements encoding.TextMarshaler
 func (e *EWMA) MarshalText() ([]byte, error) {
 	return e.MarshalJSON()
 }
@@ -87,9 +89,9 @@ func (e *EWMA) tickWatcher() {
 watcher:
 	for {
 		select {
-		case _ = <-e.tickerStopChan:
+		case <-e.tickerStopChan:
 			break watcher
-		case _ = <-e.ticker.C:
+		case <-e.ticker.C:
 			e.Tick()
 		}
 	}

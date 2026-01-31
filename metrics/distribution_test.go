@@ -53,10 +53,7 @@ func TestDistribution(t *testing.T) {
 func BenchmarkDistributionConcurrentUpdate(b *testing.B) {
 	concurrency := 100
 	d := NewDistribution()
-	items := b.N / concurrency
-	if items < 1 {
-		items = 1
-	}
+	items := max(b.N/concurrency, 1)
 	count := 0
 	doneCh := make(chan bool)
 	for i := 0; i < b.N; i += items {
@@ -69,6 +66,6 @@ func BenchmarkDistributionConcurrentUpdate(b *testing.B) {
 		count++
 	}
 	for i := 0; i < count; i++ {
-		_ = <-doneCh
+		<-doneCh
 	}
 }

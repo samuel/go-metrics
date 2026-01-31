@@ -12,9 +12,9 @@ type runtimeMetrics struct {
 	memStats runtime.MemStats
 }
 
-func (s *runtimeMetrics) Metrics() map[string]interface{} {
+func (s *runtimeMetrics) Metrics() map[string]any {
 	runtime.ReadMemStats(&s.memStats)
-	return map[string]interface{}{
+	return map[string]any{
 		"Mallocs":          CounterValue(s.memStats.Mallocs),
 		"Frees":            CounterValue(s.memStats.Frees),
 		"heap/HeapAlloc":   GaugeValue(s.memStats.HeapAlloc),

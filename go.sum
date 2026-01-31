@@ -1,0 +1,4 @@
+github.com/bmizerany/aws4 v0.0.0-20141025110357-5fb2e7239626 h1:+BShUYeLVWnZfJBzodJp3Y+pMsKZzYEwWItSoL+r61s=
+github.com/bmizerany/aws4 v0.0.0-20141025110357-5fb2e7239626/go.mod h1:1qbMWKr5WUBWWACRFRTMcN2ntzeuWyevPq0e1YplD3Y=
+github.com/stathat/stathatgo v0.0.0-20120523152946-169bb01d9f50 h1:5/S+RL9PZ2mUYRJBKf0zVyVwG2GmBLLb+siri3rGqHs=
+github.com/stathat/stathatgo v0.0.0-20120523152946-169bb01d9f50/go.mod h1:azMvPbHImQ3M/kHZCnliFSh27JsvbUH2R0F1FrC3Ijg=

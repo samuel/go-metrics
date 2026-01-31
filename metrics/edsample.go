@@ -60,11 +60,11 @@ func (r *reservoir) Swap(i, j int) {
 	r.samples[i], r.samples[j] = r.samples[j], r.samples[i]
 }
 
-func (r *reservoir) Push(x interface{}) {
+func (r *reservoir) Push(x any) {
 	r.samples = append(r.samples, x.(priorityValue))
 }
 
-func (r *reservoir) Pop() interface{} {
+func (r *reservoir) Pop() any {
 	v := r.samples[len(r.samples)-1]
 	r.samples = r.samples[:len(r.samples)-1]
 	return v

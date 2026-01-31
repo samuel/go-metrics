@@ -1,11 +1,7 @@
-Metrics Package for Go
-======================
+# Metrics Package for Go
 
-[![Build Status](https://travis-ci.org/samuel/go-metrics.png)](https://travis-ci.org/samuel/go-metrics)
+[![GoDoc](https://godoc.org/github.com/samuel/go-metrics?status.svg)](https://pkg.go.dev/github.com/samuel/go-metrics)
 
-Documentation: <http://godoc.org/github.com/samuel/go-metrics/metrics>
-
-License
--------
+## License
 
 3-clause BSD. See LICENSE file.

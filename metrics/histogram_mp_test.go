@@ -5,7 +5,7 @@
 package metrics
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"testing"
 )
@@ -60,13 +60,13 @@ func TestMPCollapse(t *testing.T) {
 		t.Fatalf("mp.combine returned %+v instead of %+v", result, expected)
 	}
 
-	rand.Seed(0)
+	rnd := rand.New(rand.NewPCG(0, 0))
 	buf1 = make([]int64, 15625)
 	buf2 = make([]int64, 15625)
 	result = make([]int64, 15625)
 	for i := 0; i < len(buf1); i++ {
-		buf1[i] = rand.Int63()
-		buf2[i] = rand.Int63()
+		buf1[i] = int64(rnd.Int32())
+		buf2[i] = int64(rnd.Int32())
 	}
 	hist.collapse(buf1, 2, buf2, 10, result)
 	n := 0
@@ -203,7 +203,7 @@ func TestMPSmallestIndexFinder(t *testing.T) {
 }
 
 func addToHist(hist Histogram, n int) {
-	for i := 0; i < n; i++ {
+	for range n {
 		hist.Update(1)
 	}
 }

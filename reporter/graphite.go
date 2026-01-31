@@ -45,13 +45,13 @@ func (r *graphiteReporter) Report(snapshot *metrics.RegistrySnapshot) {
 	ts := time.Now().UTC().Unix()
 
 	for _, v := range snapshot.Values {
-		name := strings.Replace(v.Name, "/", ".", -1)
+		name := strings.ReplaceAll(v.Name, "/", ".")
 		if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), v.Value, ts); err != nil {
 			log.Printf("graphite: failed to post metric %s: %s", name, err.Error())
 		}
 	}
 	for _, v := range snapshot.Distributions {
-		name := strings.Replace(v.Name, "/", ".", -1)
+		name := strings.ReplaceAll(v.Name, "/", ".")
 		if _, err := fmt.Fprintf(conn, "%s %f %d\n", r.sourcedName(name), v.Value.Mean(), ts); err != nil {
 			log.Printf("graphite: failed to post metric %s: %s", name, err.Error())
 		}

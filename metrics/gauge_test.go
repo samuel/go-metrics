@@ -23,21 +23,21 @@ func TestIntegerGauge(t *testing.T) {
 
 func BenchmarkIntegerGaugeInc(b *testing.B) {
 	c := NewIntegerGauge()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		c.Inc(1)
 	}
 }
 
 func BenchmarkIntegerGaugeValue(b *testing.B) {
 	c := NewIntegerGauge()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		c.IntegerValue()
 	}
 }
 
 func BenchmarkGaugeSet(b *testing.B) {
 	c := NewIntegerGauge()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		c.Set(1)
 	}
 }

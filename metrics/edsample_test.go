@@ -61,7 +61,7 @@ func TestEDSampleInactivity(t *testing.T) {
 	realSample := sample.(*exponentiallyDecayingSample)
 
 	// add 1000 values at a rate of 10 values/second
-	for i := int64(0); i < 1000; i++ {
+	for i := range int64(1000) {
 		sample.Update(1000 + i)
 		curTime = curTime.Add(time.Millisecond * 100)
 	}
@@ -86,7 +86,7 @@ func TestEDSampleInactivity(t *testing.T) {
 	// }
 
 	// add 1000 values at a rate of 10 values/second
-	for i := int64(0); i < 1000; i++ {
+	for i := range int64(1000) {
 		sample.Update(3000 + i)
 		curTime = curTime.Add(time.Millisecond * 100)
 	}
@@ -101,7 +101,7 @@ func TestEDSampleInactivity(t *testing.T) {
 func BenchmarkEDSampleUpdate(b *testing.B) {
 	b.ReportAllocs()
 	sample := NewExponentiallyDecayingSample(1000, 0.99)
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		sample.Update(int64(i))
 	}
 }

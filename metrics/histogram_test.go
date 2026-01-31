@@ -6,8 +6,9 @@ package metrics
 
 import (
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"sort"
+	"sync"
 	"testing"
 )
 
@@ -18,7 +19,7 @@ func benchmarkHistogramUpdate(b *testing.B, h Histogram) {
 }
 
 func benchmarkHistogramPercentiles(b *testing.B, h Histogram) {
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		h.Update(int64(i))
 	}
 	perc := []float64{0.5, 0.75, 0.9, 0.95, 0.99, 0.999, 0.9999}
@@ -29,24 +30,18 @@ func benchmarkHistogramPercentiles(b *testing.B, h Histogram) {
 
 func benchmarkHistogramConcurrentUpdate(b *testing.B, h Histogram) {
 	concurrency := 100
-	items := b.N / concurrency
-	if items < 1 {
-		items = 1
-	}
-	count := 0
-	doneCh := make(chan bool)
+	items := max(b.N/concurrency, 1)
+	var wg sync.WaitGroup
 	for i := 0; i < b.N; i += items {
+		wg.Add(1)
 		go func(start int) {
 			for j := start; j < start+items && j < b.N; j++ {
 				h.Update(int64(j))
 			}
-			doneCh <- true
+			wg.Done()
 		}(i)
-		count++
 	}
-	for i := 0; i < count; i++ {
-		_ = <-doneCh
-	}
+	wg.Wait()
 }
 
 func TestHistogramAccuracy(t *testing.T) {
@@ -54,18 +49,15 @@ func TestHistogramAccuracy(t *testing.T) {
 		return
 	}
 
-	rand.Seed(0)
+	rnd := rand.New(rand.NewPCG(0, 0))
 	h1 := NewUnbiasedHistogram()
 	h2 := NewBiasedHistogram()
 	h3 := NewDefaultBucketedHistogram()
 	h4 := NewDefaultMunroPatersonHistogram()
 	count := 1000000
 	values := int64Slice(make([]int64, count))
-	for i := 0; i < count; i++ {
-		v := int64(rand.NormFloat64()*5000 + 100000)
-		if v < 0 {
-			v = 0
-		}
+	for i := range count {
+		v := max(int64(rnd.NormFloat64()*5000+100000), 0)
 		h1.Update(v)
 		h2.Update(v)
 		h3.Update(v)

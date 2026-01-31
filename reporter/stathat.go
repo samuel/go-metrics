@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/samuel/go-metrics/metrics"
-	"github.com/stathat/stathatgo"
+	stathat "github.com/stathat/stathatgo"
 )
 
 type statHatReporter struct {
@@ -28,13 +28,13 @@ func NewStatHatReporter(registry metrics.Registry, interval time.Duration, latch
 
 func (r *statHatReporter) Report(snapshot *metrics.RegistrySnapshot) {
 	for _, v := range snapshot.Values {
-		name := strings.Replace(v.Name, "/", ".", -1)
+		name := strings.ReplaceAll(v.Name, "/", ".")
 		if err := stathat.PostEZValue(name, r.email, v.Value); err != nil {
 			log.Printf("stathat: failed to post metric %s: %s", name, err.Error())
 		}
 	}
 	for _, v := range snapshot.Distributions {
-		name := strings.Replace(v.Name, "/", ".", -1)
+		name := strings.ReplaceAll(v.Name, "/", ".")
 		if err := stathat.PostEZValue(name, r.email, v.Value.Mean()); err != nil {
 			log.Printf("stathat: failed to post metric %s: %s", name, err.Error())
 		}

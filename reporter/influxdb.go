@@ -24,15 +24,15 @@ func NewInfluxDBReporter(registry metrics.Registry, interval time.Duration, latc
 	} else if baseURL[len(baseURL)-1] == '/' {
 		baseURL = baseURL[:len(baseURL)-1]
 	}
-	var tagStr string
+	var tagStr strings.Builder
 	if len(tags) != 0 {
 		for k, v := range tags {
-			tagStr += fmt.Sprintf(",%s=%s", k, v)
+			tagStr.WriteString(fmt.Sprintf(",%s=%s", k, v))
 		}
 	}
 	lr := &influxDBReporter{
 		writeURL: fmt.Sprintf("%s/write?db=%s", baseURL, dbName),
-		tags:     tagStr,
+		tags:     tagStr.String(),
 	}
 	return NewPeriodicReporter(registry, interval, true, latched, lr)
 }
@@ -40,11 +40,11 @@ func NewInfluxDBReporter(registry metrics.Registry, interval time.Duration, latc
 func (r *influxDBReporter) Report(snapshot *metrics.RegistrySnapshot) {
 	var measurements []string
 	for _, v := range snapshot.Values {
-		name := strings.Replace(v.Name, "/", "_", -1)
+		name := strings.ReplaceAll(v.Name, "/", ".")
 		measurements = append(measurements, name+r.tags+" value="+strconv.FormatFloat(v.Value, 'f', -1, 64))
 	}
 	for _, v := range snapshot.Distributions {
-		name := strings.Replace(v.Name, "/", "_", -1)
+		name := strings.ReplaceAll(v.Name, "/", ".")
 		if v.Value.Count != 0 {
 			measurements = append(measurements, name+r.tags+fmt.Sprintf(" count=%di,sum=%f,min=%f,max=%f,variance=%f", v.Value.Count, v.Value.Sum, v.Value.Min, v.Value.Max, v.Value.Variance))
 		}

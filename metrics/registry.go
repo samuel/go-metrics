@@ -15,14 +15,14 @@ import (
 
 type Registry interface {
 	Scope(scope string) Registry
-	Add(name string, metric interface{})
+	Add(name string, metric any)
 	Remove(name string)
 	Do(f Doer) error
 }
 
 type registry struct {
 	scope   string
-	metrics map[string]interface{}
+	metrics map[string]any
 	mutex   sync.RWMutex
 }
 
@@ -33,16 +33,16 @@ type filteredRegistry struct {
 }
 
 type Collection interface {
-	Metrics() map[string]interface{}
+	Metrics() map[string]any
 }
 
-type Doer func(name string, metric interface{}) error
+type Doer func(name string, metric any) error
 
 // Registry
 
 func NewRegistry() Registry {
 	return &registry{
-		metrics: make(map[string]interface{}),
+		metrics: make(map[string]any),
 	}
 }
 
@@ -60,7 +60,7 @@ func (r *registry) Scope(scope string) Registry {
 	}
 }
 
-func (r *registry) Add(name string, metric interface{}) {
+func (r *registry) Add(name string, metric any) {
 	r.mutex.Lock()
 	r.metrics[r.scopedName(name)] = metric
 	r.mutex.Unlock()
@@ -85,7 +85,7 @@ func NewFilterdRegistry(registry Registry, include []*regexp.Regexp, exclude []*
 }
 
 func (r *filteredRegistry) Do(f Doer) error {
-	return r.registry.Do(func(name string, metric interface{}) error {
+	return r.registry.Do(func(name string, metric any) error {
 		if r.exclude != nil {
 			for _, re := range r.exclude {
 				if re.MatchString(name) {
@@ -109,7 +109,7 @@ func (r *filteredRegistry) Scope(scope string) Registry {
 	return &filteredRegistry{r.registry.Scope(scope), r.include, r.exclude}
 }
 
-func (r *filteredRegistry) Add(name string, metric interface{}) {
+func (r *filteredRegistry) Add(name string, metric any) {
 	r.registry.Add(name, metric)
 }
 
@@ -117,7 +117,7 @@ func (r *filteredRegistry) Remove(name string) {
 	r.registry.Remove(name)
 }
 
-func do(scope string, metrics map[string]interface{}, f Doer) error {
+func do(scope string, metrics map[string]any, f Doer) error {
 	for name, metric := range metrics {
 		if scope != "" {
 			name = scope + "/" + name
@@ -139,12 +139,12 @@ func do(scope string, metrics map[string]interface{}, f Doer) error {
 func RegistryHandler(reg Registry) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		fmt.Fprintf(w, "{\n")
+		fmt.Fprint(w, "{\n")
 		first := true
 		enc := json.NewEncoder(w)
-		reg.Do(func(name string, metric interface{}) error {
+		reg.Do(func(name string, metric any) error {
 			if !first {
-				fmt.Fprintf(w, ",")
+				fmt.Fprint(w, ",")
 			}
 			first = false
 			fmt.Fprintf(w, "%q: ", name)
@@ -155,6 +155,6 @@ func RegistryHandler(reg Registry) http.Handler {
 			}
 			return nil
 		})
-		fmt.Fprintf(w, "\n}\n")
+		fmt.Fprint(w, "\n}\n")
 	})
 }

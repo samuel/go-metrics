@@ -20,10 +20,12 @@ func TestRegistry(t *testing.T) {
 	r.Add("num", 1)
 	r2.Add("foo", "bar")
 	metrics := make(map[string]string)
-	r.Do(func(name string, metric interface{}) error {
+	if err := r.Do(func(name string, metric any) error {
 		metrics[name] = fmt.Sprintf("%+v", metric)
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	exp := map[string]string{"num": "1", "test/foo": "bar"}
 	if !reflect.DeepEqual(metrics, exp) {
 		t.Fatalf("registry.Do should have returned %+v instead of %+v", exp, metrics)
@@ -38,10 +40,12 @@ func TestFilteredRegistry(t *testing.T) {
 	// nil include and exclude should make the filter a no-op
 	fr := NewFilterdRegistry(r, nil, nil)
 	out := make(map[string]string)
-	fr.Do(func(name string, metric interface{}) error {
+	if err := fr.Do(func(name string, metric any) error {
 		out[name] = fmt.Sprintf("%+v", metric)
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	exp := map[string]string{"num": "1", "string": "x"}
 	if !reflect.DeepEqual(out, exp) {
 		t.Fatalf("filteredRegistry.Do should have returned %+v instead of %+v", exp, out)
@@ -50,10 +54,12 @@ func TestFilteredRegistry(t *testing.T) {
 	// includes
 	fr = NewFilterdRegistry(r, []*regexp.Regexp{regexp.MustCompile("^num$")}, nil)
 	out = make(map[string]string)
-	fr.Do(func(name string, metric interface{}) error {
+	if err := fr.Do(func(name string, metric any) error {
 		out[name] = fmt.Sprintf("%+v", metric)
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	exp = map[string]string{"num": "1"}
 	if !reflect.DeepEqual(out, exp) {
 		t.Fatalf("filteredRegistry.Do should have returned %+v instead of %+v", exp, out)
@@ -62,7 +68,7 @@ func TestFilteredRegistry(t *testing.T) {
 	// excludes
 	fr = NewFilterdRegistry(r, nil, []*regexp.Regexp{regexp.MustCompile("^num$")})
 	out = make(map[string]string)
-	fr.Do(func(name string, metric interface{}) error {
+	fr.Do(func(name string, metric any) error {
 		out[name] = fmt.Sprintf("%+v", metric)
 		return nil
 	})
@@ -86,7 +92,7 @@ func TestRegistryHandler(t *testing.T) {
 		t.Fatalf("Expected response 200. Got %d", res.Code)
 	}
 	t.Logf("%s", res.Body.String())
-	var out map[string]interface{}
+	var out map[string]any
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		t.Fatal(err)
 	}

@@ -95,7 +95,7 @@ func TestBucketedHistogramPercentiles(t *testing.T) {
 		1.0:  1000,
 	}
 	h.Clear()
-	for i := int64(0); i < 1000; i++ {
+	for i := range int64(1000) {
 		h.Update(i)
 	}
 	for perc, value := range tests {

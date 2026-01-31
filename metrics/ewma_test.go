@@ -70,14 +70,14 @@ func TestEWMATicker(t *testing.T) {
 
 func BenchmarkEWMAUpdate(b *testing.B) {
 	e := NewEWMA(time.Second*5, M1Alpha)
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		e.Update(1)
 	}
 }
 
 func BenchmarkEWMARate(b *testing.B) {
 	e := NewEWMA(time.Second*5, M1Alpha)
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		e.Rate()
 	}
 }
@@ -85,10 +85,7 @@ func BenchmarkEWMARate(b *testing.B) {
 func BenchmarkEWMAConcurrentUpdate(b *testing.B) {
 	concurrency := 100
 	e := NewEWMA(time.Second*5, M1Alpha)
-	items := b.N / concurrency
-	if items < 1 {
-		items = 1
-	}
+	items := max(b.N/concurrency, 1)
 	count := 0
 	doneCh := make(chan bool)
 	for i := 0; i < b.N; i += items {
@@ -101,6 +98,6 @@ func BenchmarkEWMAConcurrentUpdate(b *testing.B) {
 		count++
 	}
 	for i := 0; i < count; i++ {
-		_ = <-doneCh
+		<-doneCh
 	}
 }

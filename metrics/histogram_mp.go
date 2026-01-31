@@ -46,7 +46,7 @@ type mpHistogram struct {
 // http://szl.googlecode.com/svn-history/r36/trunk/src/emitters/szlquantile.cc
 func NewMunroPatersonHistogram(bufSize, maxDepth int) Histogram {
 	buffer := make([][]int64, maxDepth+1)
-	for i := 0; i < len(buffer); i++ {
+	for i := range buffer {
 		buffer[i] = make([]int64, bufSize)
 	}
 	return &mpHistogram{
@@ -135,7 +135,7 @@ func (mp *mpHistogram) Percentiles(qs []float64) []int64 {
 	sort.Sort(int64Slice(mp.buffer[1][:buf1Size]))
 
 	indices := mp.indices
-	for i := 0; i < len(indices); i++ {
+	for i := range indices {
 		indices[i] = 0
 	}
 	sum := int64(0)
@@ -255,9 +255,10 @@ func (mp *mpHistogram) recCollapse(buf []int64, level int) {
 
 // collapse two sorted Arrays of different weight
 // ex: [2,5,7] weight 2 and [3,8,9] weight 3
-//     weight x array + concat = [2,2,5,5,7,7,3,3,3,8,8,8,9,9,9]
-//     sort = [2,2,3,3,3,5,5,7,7,8,8,8,9,9,9]
-//     select every nth elems = [3,7,9]  (n = sum weight / 2)
+//
+//	weight x array + concat = [2,2,5,5,7,7,3,3,3,8,8,8,9,9,9]
+//	sort = [2,2,3,3,3,5,5,7,7,8,8,8,9,9,9]
+//	select every nth elems = [3,7,9]  (n = sum weight / 2)
 func (mp *mpHistogram) collapse(left []int64, leftWeight int, right []int64, rightWeight int, output []int64) {
 	totalWeight := leftWeight + rightWeight
 	i := 0
@@ -335,8 +336,8 @@ func (mp *mpHistogram) weight(level int) int {
 //
 
 // We compute the "smallest possible k" satisfying two inequalities:
-//    1)   (b - 2) * (2 ^ (b - 2)) + 0.5 <= epsilon * N
-//    2)   k * (2 ^ (b - 1)) >= N
+//  1. (b - 2) * (2 ^ (b - 2)) + 0.5 <= epsilon * N
+//  2. k * (2 ^ (b - 1)) >= N
 //
 // For an explanation of these inequalities, please read the Munro-Paterson or
 // the Manku-Rajagopalan-Linday papers.

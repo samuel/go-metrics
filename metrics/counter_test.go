@@ -19,14 +19,14 @@ func TestCounter(t *testing.T) {
 
 func BenchmarkCounterInc(b *testing.B) {
 	c := NewCounter()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		c.Inc(1)
 	}
 }
 
 func BenchmarkCounterCount(b *testing.B) {
 	c := NewCounter()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		c.Count()
 	}
 }

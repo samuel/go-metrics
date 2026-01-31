@@ -40,10 +40,12 @@ func (m *Meter) String() string {
 		m.m1Rate.String(), m.m5Rate.String(), m.m15Rate.String())
 }
 
+// MarshalJSON implements json.Marshaler
 func (m *Meter) MarshalJSON() ([]byte, error) {
 	return []byte(m.String()), nil
 }
 
+// MarshalText implements encoding.TextMarshaler
 func (m *Meter) MarshalText() ([]byte, error) {
 	return m.MarshalJSON()
 }
@@ -52,9 +54,9 @@ func (m *Meter) tickWatcher() {
 watcher:
 	for {
 		select {
-		case _ = <-m.tickerStopChan:
+		case <-m.tickerStopChan:
 			break watcher
-		case _ = <-m.ticker.C:
+		case <-m.ticker.C:
 			m.tick()
 		}
 	}
@@ -91,7 +93,7 @@ func (m *Meter) Count() uint64 {
 
 // MeanRate returns the average rate
 func (m *Meter) MeanRate() float64 {
-	tdelta := time.Now().Sub(m.startTime)
+	tdelta := time.Since(m.startTime)
 	count := m.Count()
 	return float64(count) / tdelta.Seconds()
 }

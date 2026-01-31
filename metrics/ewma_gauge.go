@@ -39,10 +39,12 @@ func (e *EWMAGauge) String() string {
 	return strconv.FormatFloat(rate, 'g', -1, 64)
 }
 
+// MarshalJSON implements json.Marshaler
 func (e *EWMAGauge) MarshalJSON() ([]byte, error) {
 	return []byte(e.String()), nil
 }
 
+// MarshalText implements encoding.TextMarshaler
 func (e *EWMAGauge) MarshalText() ([]byte, error) {
 	return e.MarshalJSON()
 }
@@ -76,9 +78,9 @@ func (e *EWMAGauge) tickWatcher() {
 	}()
 	for {
 		select {
-		case _ = <-e.tickerStopChan:
+		case <-e.tickerStopChan:
 			return
-		case _ = <-e.ticker.C:
+		case <-e.ticker.C:
 			e.Tick()
 		}
 	}

@@ -2,7 +2,7 @@ package reporter
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -24,7 +24,7 @@ type cloudWatchReporter struct {
 }
 
 type cloudWatchMetric struct {
-	value interface{}
+	value any
 	stats struct {
 		min         float64
 		max         float64
@@ -48,7 +48,7 @@ func newCloudWatchReporter(interval time.Duration, region string, authFunc AWSAu
 	}
 
 	awsTransport := &http.Transport{
-		Dial: (&net.Dialer{Timeout: timeout}).Dial,
+		Dial:                  (&net.Dialer{Timeout: timeout}).Dial,
 		ResponseHeaderTimeout: timeout,
 	}
 	awsClient := &http.Client{
@@ -71,7 +71,7 @@ func (r *cloudWatchReporter) Report(snapshot *metrics.RegistrySnapshot) {
 	mets := make(map[string]cloudWatchMetric)
 
 	for _, v := range snapshot.Values {
-		mets[strings.Replace(v.Name, "/", ".", -1)] = cloudWatchMetric{value: v.Value}
+		mets[strings.ReplaceAll(v.Name, "/", ".")] = cloudWatchMetric{value: v.Value}
 	}
 	for _, v := range snapshot.Distributions {
 		m := cloudWatchMetric{}
@@ -79,7 +79,7 @@ func (r *cloudWatchReporter) Report(snapshot *metrics.RegistrySnapshot) {
 		m.stats.max = v.Value.Max
 		m.stats.sum = v.Value.Sum
 		m.stats.sampleCount = v.Value.Count
-		mets[strings.Replace(v.Name, "/", ".", -1)] = m
+		mets[strings.ReplaceAll(v.Name, "/", ".")] = m
 	}
 
 	if len(mets) > 0 {
@@ -133,7 +133,7 @@ func (r *cloudWatchReporter) Report(snapshot *metrics.RegistrySnapshot) {
 		}
 		defer res.Body.Close()
 		if res.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(res.Body)
+			body, err := io.ReadAll(res.Body)
 			if err != nil {
 				log.Printf("metrics/reporter/cloudwatch: failed to read response body: %+v", err)
 			} else {

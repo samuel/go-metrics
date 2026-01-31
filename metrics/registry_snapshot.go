@@ -7,6 +7,11 @@ type NamedValue struct {
 	Value float64
 }
 
+type NamedGroup struct {
+	Name    string
+	Metrics []any
+}
+
 type NamedDistribution struct {
 	Name  string
 	Value DistributionValue
@@ -30,7 +35,7 @@ func NewRegistrySnapshot(resetOnSnapshot bool) *RegistrySnapshot {
 func (rs *RegistrySnapshot) Snapshot(registry Registry) {
 	rs.Values = rs.Values[:0]
 	rs.Distributions = rs.Distributions[:0]
-	registry.Do(func(name string, metric interface{}) error {
+	registry.Do(func(name string, metric any) error {
 		switch m := metric.(type) {
 		case *EWMA:
 			rs.Values = append(rs.Values, NamedValue{Name: name, Value: m.Rate()})
@@ -92,7 +97,7 @@ func (rs *RegistrySnapshot) Scope(scope string) Registry {
 	panic("Scope called on RegistrySnapshot")
 }
 
-func (rs *RegistrySnapshot) Add(name string, metric interface{}) {
+func (rs *RegistrySnapshot) Add(name string, metric any) {
 	panic("Add called on RegistrySnapshot")
 }
 
